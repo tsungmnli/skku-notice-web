@@ -1,0 +1,61 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--app-bg);
+  border-bottom: 1px solid var(--surface-border);
+  backdrop-filter: blur(8px);
+}
+
+.inner {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--container-px);
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logoSub {
+  white-space: nowrap;
+}
+
+.nav {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.activeNav {
+  color: var(--text-primary) !important;
+  background: var(--surface-hover) !important;
+}
+
+.activeNav:hover {
+  color: var(--accent-green) !important;
+}
+
+@media (max-width: 35.99em) {
+  .nav {
+    display: none;
+  }
+}
+
+.themeToggle {
+  min-width: 40px;
+  min-height: 40px;
+  transition: opacity 150ms ease;
+}
+
+.themeToggle:hover {
+  opacity: 0.8;
+}

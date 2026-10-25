@@ -1,0 +1,19 @@
+.panel {
+  padding: var(--sp-4);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.sectionLabel {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.dateInput {
+  width: 100%;
+}
+
+.dateInput input {
+  width: 100%;
+}

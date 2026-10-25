@@ -1,0 +1,13 @@
+.urlCode {
+  word-break: break-all;
+  font-size: 11px;
+  padding: 10px 12px;
+}
+
+.copyBtn {
+  align-self: flex-start;
+}
+
+.list {
+  padding-left: 4px;
+}

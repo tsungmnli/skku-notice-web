@@ -1,0 +1,39 @@
+.pageContainer {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--sp-4) var(--container-px);
+}
+
+.header {
+  padding: var(--sp-1) 0;
+}
+
+.emptyState {
+  min-height: 320px;
+}
+
+.list {
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--surface-border);
+  overflow: hidden;
+}
+
+.missingList {
+  border: 1px dashed var(--surface-border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--sp-1) 0;
+}
+
+.missingItem {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.missingItem:last-child {
+  border-bottom: none;
+}
+
+.missingText {
+  opacity: 0.6;
+}

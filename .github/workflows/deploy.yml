@@ -1,0 +1,152 @@
+name: build-and-deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: tsungmn/skku-notice-web
+  API_BASE: https://skkunoti.tsungmn.com/api/v1
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npm run lint
+        # continue-on-error: true
+
+      - run: npm audit --omit=dev --audit-level=high
+
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.vars.outputs.image }}
+      tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: vars
+        run: |
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      # arm64 빌드는 main 에서만 한다 (QEMU 라서 느리다)
+      - uses: docker/setup-qemu-action@v3
+        if: github.ref == 'refs/heads/main'
+      - uses: docker/setup-buildx-action@v3
+
+      # 1) amd64 로 빌드해서 로컬에 올리고 스모크 테스트 (모든 브랜치)
+      - name: 빌드 (amd64, 테스트용)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: web-smoke:ci
+          build-args: |
+            NEXT_PUBLIC_API_BASE=${{ env.API_BASE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 스모크 테스트
+        run: |
+          docker run -d --name web-smoke -p 3000:3000 web-smoke:ci
+          for i in $(seq 1 30); do
+            curl -fsS -o /dev/null http://localhost:3000/ && break
+            sleep 2
+          done
+          # 모든 화면이 열리는지
+          for p in / /favorites /calendar; do
+            curl -fsS -o /dev/null "http://localhost:3000${p}"
+          done
+          # API 주소가 번들에 박혀 있는지 (빠지면 브라우저가 localhost 로 요청을 보낸다)
+          docker exec web-smoke grep -rlF "${API_BASE}" /app/.next/static > /dev/null
+          # root 로 실행되고 있지 않은지
+          test "$(docker exec web-smoke id -u)" != "0"
+
+      - name: 실패 시 컨테이너 로그
+        if: failure()
+        run: docker logs web-smoke || true
+
+      # 2) Docker Hub 에 로그인하고 multi-arch 이미지를 push
+      - name: Docker Hub 로그인
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: tsungmn
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 빌드 + push (amd64, arm64)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE=${{ env.API_BASE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      # CONFIG_REPO_TOKEN: fine-grained PAT, repo = skku-notice-infra only, Contents: Read and write.
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/skku-notice-infra
+          ref: main
+          token: ${{ secrets.CONFIG_REPO_TOKEN }}
+
+      - name: infra repo 의 이미지 태그 갱신
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re
+          p = pathlib.Path("config/overlays/web/kustomization.yaml")
+          s = p.read_text(encoding="utf-8")
+          pattern = re.compile(r'(- name: ' + re.escape(os.environ["IMAGE"]) + r'\r?\n\s+newTag: )"?[^"\r\n]*"?')
+          new, n = pattern.subn(r'\1"' + os.environ["TAG"] + '"', s)
+          assert n == 1, "kustomization.yaml 에서 이미지 항목을 찾지 못했습니다"
+          p.write_text(new, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git commit -am "web: ${TAG:0:7}"
+            # api 저장소의 deploy 잡과 동시에 push 하면 거절될 수 있어 몇 번 재시도한다
+            for i in 1 2 3 4 5; do
+              if git pull --rebase && git push; then
+                exit 0
+              fi
+              sleep $((RANDOM % 5 + 2))
+            done
+            echo "infra 저장소 push 에 실패했습니다" >&2
+            exit 1
+          fi

@@ -10,6 +10,13 @@
     "prettier": "prettier --write ."
   },
   "dependencies": {
+    "@mantine/core": "^9.7.3",
+    "@mantine/dates": "^9.7.3",
+    "@mantine/hooks": "^9.7.3",
+    "@mantine/modals": "^9.7.3",
+    "@mantine/notifications": "^9.7.3",
+    "@tabler/icons-react": "^3.49.0",
+    "dayjs": "^1.11.23",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -21,6 +28,9 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "postcss": "^8.5.31",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.9.10",
     "typescript": "^5"
   }

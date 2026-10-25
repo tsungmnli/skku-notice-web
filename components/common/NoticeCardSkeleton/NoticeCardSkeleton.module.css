@@ -1,0 +1,4 @@
+.skeleton {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--surface-border);
+}

@@ -1,0 +1,12 @@
+.badge {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 150ms ease;
+}
+
+.badge[data-passed] {
+  opacity: 0.6;
+}

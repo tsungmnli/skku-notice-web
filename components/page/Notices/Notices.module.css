@@ -1,0 +1,121 @@
+.pageContainer {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--sp-4) var(--container-px);
+}
+
+.layout {
+  display: flex;
+  gap: var(--sp-5);
+  align-items: flex-start;
+}
+
+/* Sidebar */
+.sidebar {
+  display: none;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.sidebarInner {
+  position: sticky;
+  top: calc(var(--header-h) + var(--sp-2));
+  max-height: calc(100dvh - var(--header-h) - var(--sp-6));
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (min-width: 48em) {
+  .sidebar {
+    display: block;
+  }
+}
+
+/* Main */
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+.searchRow {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: 0 0 var(--sp-3) 0;
+}
+
+.searchInput {
+  flex: 1;
+}
+
+.filterBtn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (min-width: 48em) {
+  .filterBtn {
+    display: none;
+  }
+}
+
+.filterBadge {
+  pointer-events: none;
+}
+
+/* Filter chips */
+.chips {
+  padding: 0 0 var(--sp-2) 0;
+}
+
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity 150ms ease;
+  min-width: 16px;
+  min-height: 16px;
+}
+
+.chipRemove:hover {
+  opacity: 1;
+}
+
+.chipRemove:focus-visible {
+  outline: 2px solid var(--skku-green-5);
+  outline-offset: 1px;
+  border-radius: var(--radius-sm);
+}
+
+/* Result header */
+.resultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.sortSelect {
+  max-width: 160px;
+}
+
+/* List */
+.list {
+  background: var(--surface-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+}
+
+.emptyState {
+  min-height: 240px;
+}
