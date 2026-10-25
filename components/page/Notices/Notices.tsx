@@ -21,7 +21,7 @@ import {
   ActionIcon,
   Badge,
   Select,
-  ScrollArea,
+  ScrollAreaAutosize,
 } from "@mantine/core";
 import {
   IconSearch,
@@ -356,9 +356,9 @@ function NoticesContent() {
         size="340px"
         position="right"
       >
-        <ScrollArea.Autosize mah="calc(100dvh - 120px)">
+        <ScrollAreaAutosize mah="calc(100dvh - 120px)">
           {filterPanel}
-        </ScrollArea.Autosize>
+        </ScrollAreaAutosize>
       </Drawer>
     </div>
   );

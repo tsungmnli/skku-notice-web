@@ -11,6 +11,7 @@ import {
   Group,
   Divider,
   TextInput,
+  CheckboxGroup,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useState, useMemo } from "react";
@@ -75,7 +76,7 @@ export function FilterPanel({
         <Text size="xs" fw={600} c="dimmed" className={classes.sectionLabel}>
           카테고리
         </Text>
-        <Checkbox.Group
+        <CheckboxGroup
           value={selectedCategories}
           onChange={(val) => onChange({ category: val.length ? val : null })}
         >
@@ -89,7 +90,7 @@ export function FilterPanel({
               />
             ))}
           </Stack>
-        </Checkbox.Group>
+        </CheckboxGroup>
       </Stack>
 
       <Divider />

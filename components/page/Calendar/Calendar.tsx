@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Stack,
   Group,
@@ -10,16 +10,17 @@ import {
   Switch,
   Drawer,
   Paper,
-  ScrollArea,
   Center,
   Alert,
   Divider,
+  ScrollAreaAutosize,
 } from "@mantine/core";
 import {
   IconChevronLeft,
   IconChevronRight,
   IconAlertCircle,
   IconCalendarEvent,
+  IconX,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { ArticleCard } from "@/components/common/ArticleCard";
@@ -75,6 +76,13 @@ export function CalendarClient() {
     return filteredDeadlineMap.get(selectedDate) || [];
   }, [selectedDate, filteredDeadlineMap]);
 
+  // 키보드 핸들러(useEffect)에서 쓰므로 반드시 그보다 먼저 선언해야 합니다.
+  const handleDayClick = useCallback(
+    (dateStr: string) =>
+      setSelectedDate((current) => (current === dateStr ? null : dateStr)),
+    [],
+  );
+
   // Scroll detail into view on mobile when selecting a day
   useEffect(() => {
     if (selectedDate && detailRef.current && typeof window !== "undefined") {
@@ -88,9 +96,12 @@ export function CalendarClient() {
     }
   }, [selectedDate]);
 
-  // Keyboard arrow navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedDate) {
+        setSelectedDate(null);
+        return;
+      }
       if (!gridRef.current?.contains(document.activeElement)) return;
       const activeEl = document.activeElement as HTMLElement;
       const cells = Array.from(
@@ -98,7 +109,12 @@ export function CalendarClient() {
       );
       const idx = cells.indexOf(activeEl);
       if (idx === -1) return;
-
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        const date = activeEl.dataset.date;
+        if (date) handleDayClick(date);
+        return;
+      }
       let newIdx = idx;
       if (e.key === "ArrowRight") newIdx = Math.min(idx + 1, cells.length - 1);
       else if (e.key === "ArrowLeft") newIdx = Math.max(idx - 1, 0);
@@ -106,13 +122,12 @@ export function CalendarClient() {
         newIdx = Math.min(idx + 7, cells.length - 1);
       else if (e.key === "ArrowUp") newIdx = Math.max(idx - 7, 0);
       else return;
-
       e.preventDefault();
       cells[newIdx]?.focus();
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [calendarDays]);
+  }, [calendarDays, selectedDate, handleDayClick]);
 
   const monthLabel = currentMonth.format("YYYY년 M월");
   const goPrevMonth = () => setCurrentMonth((m) => m.subtract(1, "month"));
@@ -121,8 +136,6 @@ export function CalendarClient() {
     setCurrentMonth(dayjs.tz(new Date(), SEOUL_TZ));
     setSelectedDate(null);
   };
-
-  const handleDayClick = (dateStr: string) => setSelectedDate(dateStr);
 
   const renderDayCell = (day: dayjs.Dayjs, idx: number) => {
     const dateStr = day.format("YYYY-MM-DD");
@@ -138,6 +151,9 @@ export function CalendarClient() {
       const info = computeDDay(a.deadline_at);
       return info && !info.passed && info.days <= 3;
     });
+    const categoryDots = articles
+      .slice(0, 3)
+      .map((article) => article.categories[0] || "default");
 
     return (
       <button
@@ -149,28 +165,36 @@ export function CalendarClient() {
         data-weekend={isWeekend || undefined}
         data-has-deadline={count > 0 || undefined}
         data-imminent={hasImminent || undefined}
-        onClick={() => count > 0 && handleDayClick(dateStr)}
-        disabled={count === 0}
-        aria-label={`${dateStr}${count > 0 ? `, 마감 ${count}건` : ""}`}
+        onClick={() => handleDayClick(dateStr)}
+        aria-label={`${dateStr}${count > 0 ? `, 마감 ${count}건` : ", 마감 공지 없음"}`}
+        aria-pressed={isSelected}
       >
         <span className={classes.dayNumber}>{day.date()}</span>
         {count > 0 && (
           <div className={classes.dayContent}>
             {/* Desktop: show up to 2 title previews */}
             <div className={classes.titlesPreview}>
-              {articles.slice(0, 2).map((a) => (
-                <span key={a.id} className={classes.titlePreview}>
+              {articles.slice(0, 3).map((a) => (
+                <span
+                  key={a.id}
+                  className={classes.titlePreview}
+                  title={a.title}
+                >
+                  <span className={classes.categoryDot} />
                   {a.title}
                 </span>
               ))}
-              {count > 2 && (
-                <span className={classes.moreCount}>+{count - 2}개 더보기</span>
+              {count > 3 && (
+                <span className={classes.moreCount}>+{count - 3}개 더보기</span>
               )}
             </div>
-            {/* Mobile: dot + count only */}
-            <span className={classes.dotContainer}>
-              <span className={classes.dot} />
-              {count > 1 && <span className={classes.dotCount}>{count}</span>}
+            <span className={classes.dotContainer} aria-hidden="true">
+              {categoryDots.map((category, dotIndex) => (
+                <span key={`${category}-${dotIndex}`} className={classes.dot} />
+              ))}
+              {count > 3 && (
+                <span className={classes.dotCount}>+{count - 3}</span>
+              )}
             </span>
           </div>
         )}
@@ -191,18 +215,17 @@ export function CalendarClient() {
             : "날짜를 선택하세요"}
         </Text>
         {selectedDate && (
-          <Button
+          <ActionIcon
             variant="subtle"
-            size="xs"
             onClick={() => setSelectedDate(null)}
             aria-label="닫기"
           >
-            닫기
-          </Button>
+            <IconX size={16} />
+          </ActionIcon>
         )}
       </Group>
       <Divider />
-      <ScrollArea.Autosize mah="60vh">
+      <ScrollAreaAutosize mah="60vh">
         {selectedArticles.length > 0 ? (
           <Stack gap={0}>
             {selectedArticles.map((article) => (
@@ -223,7 +246,7 @@ export function CalendarClient() {
             </Text>
           </Center>
         )}
-      </ScrollArea.Autosize>
+      </ScrollAreaAutosize>
     </Stack>
   );
 
@@ -308,13 +331,11 @@ export function CalendarClient() {
           </Paper>
 
           {/* Desktop detail panel (right) */}
-          <div className={classes.detailDesktop} ref={detailRef}>
-            {selectedDate ? (
-              detailPanel
-            ) : (
-              <div className={classes.detailPlaceholder}>{detailPanel}</div>
-            )}
-          </div>
+          {selectedDate && (
+            <div className={classes.detailDesktop} ref={detailRef}>
+              {detailPanel}
+            </div>
+          )}
         </div>
 
         {loading && (
@@ -354,7 +375,7 @@ export function CalendarClient() {
           content: { maxWidth: "720px", margin: "0 auto" },
         }}
       >
-        <ScrollArea.Autosize mah="50vh">
+        <ScrollAreaAutosize mah="50vh">
           {selectedArticles.length > 0 ? (
             <Stack gap={0}>
               {selectedArticles.map((article) => (
@@ -373,7 +394,7 @@ export function CalendarClient() {
               </Text>
             </Center>
           )}
-        </ScrollArea.Autosize>
+        </ScrollAreaAutosize>
       </Drawer>
     </div>
   );

@@ -1,6 +1,15 @@
 "use client";
 
-import { Modal, Stack, Text, Code, Button, List, Divider } from "@mantine/core";
+import {
+  Modal,
+  Stack,
+  Text,
+  Code,
+  Button,
+  List,
+  Divider,
+  ListItem,
+} from "@mantine/core";
 import { IconCopy, IconCheck } from "@tabler/icons-react";
 import { useState } from "react";
 import { notifications } from "@mantine/notifications";
@@ -74,14 +83,12 @@ export function CalendarSubscribeModal({
             Google Calendar
           </Text>
           <List size="xs" spacing={4} className={classes.list}>
-            <List.Item>
+            <ListItem>
               Google Calendar를 열고 왼쪽 &ldquo;다른 캘린더&quot; 옆의
               &ldquo;+&quot; 클릭
-            </List.Item>
-            <List.Item>&ldquo;URL로 추가&quot; 선택</List.Item>
-            <List.Item>
-              위 URL을 붙여넣고 &ldquo;캘린더 추가&quot; 클릭
-            </List.Item>
+            </ListItem>
+            <ListItem>&ldquo;URL로 추가&quot; 선택</ListItem>
+            <ListItem>위 URL을 붙여넣고 &ldquo;캘린더 추가&quot; 클릭</ListItem>
           </List>
         </Stack>
 
@@ -92,15 +99,11 @@ export function CalendarSubscribeModal({
             Apple Calendar (iPhone / Mac)
           </Text>
           <List size="xs" spacing={4} className={classes.list}>
-            <List.Item>
-              설정 &rarr; 캘린더 &rarr; 계정 &rarr; 계정 추가
-            </List.Item>
-            <List.Item>
-              &ldquo;CalDAV 계정 추가&quot; 선택 후 URL 입력
-            </List.Item>
-            <List.Item>
+            <ListItem>설정 &rarr; 캘린더 &rarr; 계정 &rarr; 계정 추가</ListItem>
+            <ListItem>&ldquo;CalDAV 계정 추가&quot; 선택 후 URL 입력</ListItem>
+            <ListItem>
               또는 Mac의 캘린더 앱에서 &ldquo;캘린더 구독&quot; 후 URL 붙여넣기
-            </List.Item>
+            </ListItem>
           </List>
         </Stack>
       </Stack>
