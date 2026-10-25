@@ -13,7 +13,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import type { Category, PinnedFilter, Writer } from "@/lib/api/types";
 import { PINNED_LABELS, categoryLabel } from "@/utils/constants";
 import classes from "./FilterPanel.module.css";
@@ -44,21 +44,14 @@ export function FilterPanel({
   onReset,
 }: Props) {
   const [writerSearch, setWriterSearch] = useState("");
-  const [writerOptions, setWriterOptions] = useState(
-    writers.map((w) => ({
-      value: w.writer,
-      label: `${w.writer} (${w.count})`,
-    })),
-  );
-
-  useEffect(() => {
-    setWriterOptions(
+  const writerOptions = useMemo(
+    () =>
       writers.map((w) => ({
         value: w.writer,
         label: `${w.writer} (${w.count})`,
       })),
-    );
-  }, [writers]);
+    [writers],
+  );
 
   return (
     <Stack gap="md" className={classes.panel}>

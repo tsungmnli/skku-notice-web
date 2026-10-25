@@ -4,18 +4,6 @@ import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ArticleQuery, PinnedFilter, SortKey } from "@/lib/api/types";
 
-const ARRAY_KEYS = new Set(["category", "writer"]);
-
-function parseValue(
-  key: string,
-  value: string,
-): string | string[] | number | boolean {
-  if (ARRAY_KEYS.has(key)) return value;
-  if (key === "page" || key === "size") return parseInt(value, 10) || 1;
-  if (key === "has_deadline") return value === "true";
-  return value;
-}
-
 export function useNoticeQuery() {
   const router = useRouter();
   const searchParams = useSearchParams();

@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Modal,
-  Stack,
-  Text,
-  Code,
-  Group,
-  Button,
-  List,
-  Divider,
-} from "@mantine/core";
+import { Modal, Stack, Text, Code, Button, List, Divider } from "@mantine/core";
 import { IconCopy, IconCheck } from "@tabler/icons-react";
 import { useState } from "react";
 import { notifications } from "@mantine/notifications";

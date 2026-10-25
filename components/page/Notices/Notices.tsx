@@ -16,14 +16,12 @@ import {
   Pagination,
   Drawer,
   Button,
-  Box,
   Center,
   Alert,
   ActionIcon,
   Badge,
   Select,
   ScrollArea,
-  Divider,
 } from "@mantine/core";
 import {
   IconSearch,
@@ -47,6 +45,7 @@ import classes from "./Notices.module.css";
 
 const DEFAULT_SORT = "posted_desc";
 const DEFAULT_PINNED = "include";
+const EMPTY_LIST: string[] = [];
 
 const SORT_OPTIONS = Object.entries(SORT_LABELS).map(([value, label]) => ({
   value,
@@ -69,13 +68,16 @@ function NoticesContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced]);
 
-  useEffect(() => {
+  // Sync the input when the URL query changes (e.g. back/forward navigation).
+  // Adjusting state during render avoids an extra effect-driven render pass.
+  const [prevQ, setPrevQ] = useState(query.q || "");
+  if ((query.q || "") !== prevQ) {
+    setPrevQ(query.q || "");
     setActiveSearchInput(query.q || "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.q]);
+  }
 
-  const selectedCategories = query.category || [];
-  const selectedWriters = query.writer || [];
+  const selectedCategories = query.category ?? EMPTY_LIST;
+  const selectedWriters = query.writer ?? EMPTY_LIST;
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (selectedCategories.length) count++;
