@@ -55,6 +55,11 @@ export function formatDeadline(deadlineAt: string | null): string {
   return dl.format("YYYY.MM.DD HH:mm");
 }
 
+export function formatEventAt(eventAt: string | null): string {
+  if (!eventAt) return "";
+  return dayjs.tz(eventAt, SEOUL_TZ).format("YYYY.MM.DD HH:mm");
+}
+
 export function todayInSeoul(): dayjs.Dayjs {
   return dayjs.tz(new Date(), SEOUL_TZ);
 }

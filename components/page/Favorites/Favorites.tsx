@@ -42,14 +42,28 @@ export function FavoritesClient() {
 
   const { found, missing, sortedFound } = useMemo(() => {
     if (!data) return { found: [], missing: [], sortedFound: [] };
-    const sorted = [...data.items].sort((a, b) => {
-      if (!a.deadline_at && !b.deadline_at) return 0;
-      if (!a.deadline_at) return 1;
-      if (!b.deadline_at) return -1;
-      return (
-        dayjs.tz(a.deadline_at, SEOUL_TZ).valueOf() -
-        dayjs.tz(b.deadline_at, SEOUL_TZ).valueOf()
+    const today = dayjs.tz(new Date(), SEOUL_TZ).startOf("day");
+    const getDateInfo = (article: (typeof data.items)[number]) => {
+      const dates = [article.deadline_at, article.event_at].filter(
+        (date): date is string => date !== null,
       );
+      const upcoming = dates
+        .map((date) => dayjs.tz(date, SEOUL_TZ))
+        .filter((date) => !date.isBefore(today))
+        .sort((a, b) => a.valueOf() - b.valueOf())[0];
+      return { upcoming, hasDate: dates.length > 0 };
+    };
+
+    const sorted = [...data.items].sort((a, b) => {
+      const aInfo = getDateInfo(a);
+      const bInfo = getDateInfo(b);
+      const aRank = aInfo.upcoming ? 0 : aInfo.hasDate ? 1 : 2;
+      const bRank = bInfo.upcoming ? 0 : bInfo.hasDate ? 1 : 2;
+      if (aRank !== bRank) return aRank - bRank;
+      if (aInfo.upcoming && bInfo.upcoming) {
+        return aInfo.upcoming.valueOf() - bInfo.upcoming.valueOf();
+      }
+      return 0;
     });
     return {
       found: data.items,
@@ -194,6 +208,7 @@ export function FavoritesClient() {
                 article={article}
                 isFavorite={isFavorite(article.id)}
                 onToggleFavorite={toggleFavorite}
+                showDateUnknown
               />
             ))}
           </Box>

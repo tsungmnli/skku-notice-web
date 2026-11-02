@@ -93,6 +93,15 @@
   border-radius: var(--radius-sm);
 }
 
+.quickFilters {
+  flex-wrap: wrap;
+  padding: 0 0 var(--sp-2);
+}
+
+.quickFilterLabel {
+  margin-right: 2px;
+}
+
 /* Result header */
 .resultHeader {
   display: flex;
@@ -106,6 +115,11 @@
 
 .sortSelect {
   max-width: 160px;
+}
+
+.sortHint {
+  padding: var(--sp-2) 0;
+  line-height: 1.5;
 }
 
 /* List */
