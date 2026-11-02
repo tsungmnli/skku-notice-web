@@ -93,6 +93,44 @@
   border-radius: var(--radius-sm);
 }
 
+.quickFilters {
+  margin: var(--sp-2) 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.quickFilterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.quickFilterStatus {
+  flex: 0 0 auto;
+}
+
+.quickFilterOptions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.quickFilterButton {
+  min-width: 0;
+  min-height: 40px;
+  padding-inline: var(--sp-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.quickFilterButton[data-active] {
+  box-shadow: 0 0 0 2px var(--skku-green-2);
+}
+
 /* Result header */
 .resultHeader {
   display: flex;
@@ -106,6 +144,11 @@
 
 .sortSelect {
   max-width: 160px;
+}
+
+.sortHint {
+  padding: var(--sp-2) 0;
+  line-height: 1.5;
 }
 
 /* List */

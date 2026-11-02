@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import dayjs from "dayjs";
 import {
   Stack,
   TextInput,
@@ -42,7 +41,7 @@ import { useNoticeQuery } from "./hooks/useNoticeQuery";
 import { FilterPanel } from "./modules/FilterPanel";
 import { SORT_LABELS, categoryLabel } from "@/utils/constants";
 import type { SortKey } from "@/lib/api/types";
-import { SEOUL_TZ, toSeoulDateStr } from "@/utils/date";
+import { QUICK_DUE_OPTIONS, type QuickDueKey } from "@/utils/date";
 import classes from "./Notices.module.css";
 
 const DEFAULT_SORT = "posted_desc";
@@ -54,51 +53,11 @@ const SORT_OPTIONS = Object.entries(SORT_LABELS).map(([value, label]) => ({
   label,
 }));
 
-const QUICK_PERIODS = [
-  { key: "week", label: "이번 주 마감" },
-  { key: "sevenDays", label: "7일 내" },
-  { key: "month", label: "이번 달" },
-] as const;
-
-type QuickPeriodKey = (typeof QUICK_PERIODS)[number]["key"];
-
-function getQuickPeriodRange(key: QuickPeriodKey): {
-  from: string;
-  to: string;
-} {
-  const today = dayjs.tz(new Date(), SEOUL_TZ).startOf("day");
-  if (key === "sevenDays") {
-    return {
-      from: toSeoulDateStr(today),
-      to: toSeoulDateStr(today.add(6, "day")),
-    };
-  }
-  if (key === "month") {
-    return {
-      from: toSeoulDateStr(today.startOf("month")),
-      to: toSeoulDateStr(today.endOf("month")),
-    };
-  }
-  const monday = today.subtract((today.day() + 6) % 7, "day");
-  return {
-    from: toSeoulDateStr(monday),
-    to: toSeoulDateStr(monday.add(6, "day")),
-  };
-}
-
 function NoticesContent() {
-  const { query, updateQuery } = useNoticeQuery();
+  const { query, due, updateQuery } = useNoticeQuery();
   const { categories, writers } = useFilterOptions();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { data, loading, error, refetch } = useNotices(query);
-  const quickPeriodRanges = useMemo(
-    () =>
-      QUICK_PERIODS.map((period) => ({
-        ...period,
-        ...getQuickPeriodRange(period.key),
-      })),
-    [],
-  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeSearchInput, setActiveSearchInput] = useState(query.q || "");
   const [debounced] = useDebouncedValue(activeSearchInput, 300);
@@ -125,11 +84,11 @@ function NoticesContent() {
     if (selectedCategories.length) count++;
     if (selectedWriters.length) count++;
     if (query.date_from || query.date_to) count++;
-    if (query.deadline_from || query.deadline_to) count++;
+    if (due) count++;
     if (query.pinned && query.pinned !== DEFAULT_PINNED) count++;
     if (query.has_deadline) count++;
     return count;
-  }, [selectedCategories, selectedWriters, query]);
+  }, [selectedCategories, selectedWriters, query, due]);
 
   const handleFilterChange = useCallback(
     (updates: Record<string, string | string[] | null>) => {
@@ -152,8 +111,7 @@ function NoticesContent() {
       writer: null,
       date_from: null,
       date_to: null,
-      deadline_from: null,
-      deadline_to: null,
+      due: null,
       pinned: DEFAULT_PINNED,
       has_deadline: null,
       sort: DEFAULT_SORT,
@@ -174,30 +132,17 @@ function NoticesContent() {
     });
   };
 
-  const activeQuickPeriod = quickPeriodRanges.find(
-    (period) =>
-      query.deadline_from === period.from && query.deadline_to === period.to,
-  )?.key;
-
-  const handleQuickPeriod = (key: QuickPeriodKey) => {
-    const selected = quickPeriodRanges.find((period) => period.key === key);
-    if (!selected) return;
-    if (activeQuickPeriod === key) {
+  const handleQuickDue = (key: QuickDueKey) => {
+    if (due === key) {
       const updates: Record<string, string | string[] | null> = {
-        deadline_from: null,
-        deadline_to: null,
+        due: null,
         page: null,
       };
       if (query.sort === "deadline_asc") updates.sort = null;
       updateQuery(updates);
       return;
     }
-    updateQuery({
-      deadline_from: selected.from,
-      deadline_to: selected.to,
-      sort: "deadline_asc",
-      page: null,
-    });
+    updateQuery({ due: key, sort: "deadline_asc", page: null });
   };
 
   const handlePageChange = useCallback(
@@ -329,29 +274,51 @@ function NoticesContent() {
               </Group>
             )}
 
-            <Group
-              gap={6}
+            <div
               className={classes.quickFilters}
+              role="group"
               aria-label="빠른 기간 필터"
             >
-              <Text size="xs" c="dimmed" className={classes.quickFilterLabel}>
-                빠른 기간
-              </Text>
-              {quickPeriodRanges.map((period) => (
-                <Button
-                  key={period.key}
-                  size="compact-xs"
-                  variant={
-                    activeQuickPeriod === period.key ? "filled" : "light"
-                  }
-                  color="skku-green"
-                  onClick={() => handleQuickPeriod(period.key)}
-                  aria-pressed={activeQuickPeriod === period.key}
-                >
-                  {period.label}
-                </Button>
-              ))}
-            </Group>
+              <div className={classes.quickFilterHeader}>
+                <div>
+                  <Text size="sm" fw={600}>
+                    빠른 기간
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    오늘부터 마감까지 남은 기간으로 찾아보세요
+                  </Text>
+                </div>
+                {due && (
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    color="skku-green"
+                    className={classes.quickFilterStatus}
+                  >
+                    선택됨
+                  </Badge>
+                )}
+              </div>
+              <div className={classes.quickFilterOptions}>
+                {QUICK_DUE_OPTIONS.map((period) => {
+                  const isActive = due === period.key;
+                  return (
+                    <Button
+                      key={period.key}
+                      size="sm"
+                      variant={isActive ? "filled" : "light"}
+                      color="skku-green"
+                      onClick={() => handleQuickDue(period.key)}
+                      aria-pressed={isActive}
+                      data-active={isActive || undefined}
+                      className={classes.quickFilterButton}
+                    >
+                      {period.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Result header: count + sort dropdown */}
             <div className={classes.resultHeader}>

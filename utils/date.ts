@@ -67,3 +67,32 @@ export function todayInSeoul(): dayjs.Dayjs {
 export function toSeoulDateStr(d: dayjs.Dayjs): string {
   return d.tz(SEOUL_TZ).format("YYYY-MM-DD");
 }
+
+/**
+ * 빠른 마감 기간 필터. 모두 "오늘"부터 시작하는 롤링 구간이라 지난 마감이 섞이지 않고,
+ * 선택 상태는 URL의 `due` 키로 저장한다 (날짜 범위를 역추적해 판정하지 않는다).
+ */
+export const QUICK_DUE_OPTIONS = [
+  { key: "today", label: "오늘 마감", days: 0 },
+  { key: "7d", label: "7일 내", days: 6 },
+  { key: "30d", label: "30일 내", days: 29 },
+] as const;
+
+export type QuickDueKey = (typeof QUICK_DUE_OPTIONS)[number]["key"];
+
+export function isQuickDueKey(value: string | null): value is QuickDueKey {
+  return QUICK_DUE_OPTIONS.some((o) => o.key === value);
+}
+
+/** 서울 기준 오늘부터 `days`일 뒤까지(포함)의 날짜 범위. */
+export function getDueRange(
+  key: QuickDueKey,
+  now: Date = new Date(),
+): { from: string; to: string } {
+  const option = QUICK_DUE_OPTIONS.find((o) => o.key === key)!;
+  const today = dayjs.tz(now, SEOUL_TZ).startOf("day");
+  return {
+    from: toSeoulDateStr(today),
+    to: toSeoulDateStr(today.add(option.days, "day")),
+  };
+}

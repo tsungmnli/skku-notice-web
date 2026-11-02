@@ -3,10 +3,14 @@
 import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ArticleQuery, PinnedFilter, SortKey } from "@/lib/api/types";
+import { getDueRange, isQuickDueKey } from "@/utils/date";
 
 export function useNoticeQuery() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const dueParam = searchParams.get("due");
+  const due = isQuickDueKey(dueParam) ? dueParam : null;
 
   const query = useMemo<ArticleQuery>(() => {
     const q: ArticleQuery = {};
@@ -24,10 +28,13 @@ export function useNoticeQuery() {
     const dateTo = searchParams.get("date_to");
     if (dateTo) q.date_to = dateTo;
 
-    const deadlineFrom = searchParams.get("deadline_from");
-    if (deadlineFrom) q.deadline_from = deadlineFrom;
-    const deadlineTo = searchParams.get("deadline_to");
-    if (deadlineTo) q.deadline_to = deadlineTo;
+    // 빠른 마감 기간: URL에는 키(`due`)만 저장하고, 실제 날짜 범위는 여기서 계산한다.
+    // 공유/북마크한 링크도 항상 "열린 날 기준"으로 해석된다.
+    if (due) {
+      const range = getDueRange(due);
+      q.deadline_from = range.from;
+      q.deadline_to = range.to;
+    }
 
     const pinned = searchParams.get("pinned");
     if (pinned === "include" || pinned === "exclude" || pinned === "only") {
@@ -46,7 +53,7 @@ export function useNoticeQuery() {
 
     q.size = 20;
     return q;
-  }, [searchParams]);
+  }, [searchParams, due]);
 
   const updateQuery = useCallback(
     (updates: Record<string, string | string[] | null>) => {
@@ -66,5 +73,5 @@ export function useNoticeQuery() {
     [router, searchParams],
   );
 
-  return { query, updateQuery };
+  return { query, due, updateQuery };
 }
