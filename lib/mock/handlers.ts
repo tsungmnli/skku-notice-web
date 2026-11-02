@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { computeDDay, SEOUL_TZ } from "../../utils/date";
+import { computeDDay, parseSeoul, SEOUL_TZ } from "../../utils/date";
 import { mockArticles, mockCategoryList, mockWriterList } from "./data";
 import type {
   Article,
@@ -63,7 +63,7 @@ function matchesDeadlineRange(
 ): boolean {
   if (!from && !to) return true;
   if (!article.deadline_at) return false;
-  const dl = dayjs.tz(article.deadline_at, SEOUL_TZ);
+  const dl = parseSeoul(article.deadline_at);
   const dlDate = dl.format("YYYY-MM-DD");
   if (from && dlDate < from) return false;
   if (to && dlDate > to) return false;
@@ -82,12 +82,12 @@ function sortArticles(items: Article[], sort?: string): Article[] {
       const now = dayjs.tz(new Date(), SEOUL_TZ).startOf("day");
       const withDl = sorted.filter((a) => {
         if (!a.deadline_at) return false;
-        const dl = dayjs.tz(a.deadline_at, SEOUL_TZ).startOf("day");
+        const dl = parseSeoul(a.deadline_at).startOf("day");
         return dl.isAfter(now) || dl.isSame(now);
       });
       return withDl.sort((a, b) => {
-        const da = dayjs.tz(a.deadline_at!, SEOUL_TZ).valueOf();
-        const db = dayjs.tz(b.deadline_at!, SEOUL_TZ).valueOf();
+        const da = parseSeoul(a.deadline_at!).valueOf();
+        const db = parseSeoul(b.deadline_at!).valueOf();
         return da - db;
       });
     }
@@ -132,8 +132,8 @@ export async function mockListArticles(
   ) {
     const sorted = items.filter((a) => a.deadline_at !== null);
     sorted.sort((a, b) => {
-      const da = dayjs.tz(a.deadline_at!, SEOUL_TZ).valueOf();
-      const db = dayjs.tz(b.deadline_at!, SEOUL_TZ).valueOf();
+      const da = parseSeoul(a.deadline_at!).valueOf();
+      const db = parseSeoul(b.deadline_at!).valueOf();
       return da - db;
     });
     items = sorted;

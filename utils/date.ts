@@ -9,6 +9,32 @@ dayjs.extend(customParseFormat);
 
 export const SEOUL_TZ = "Asia/Seoul";
 
+// "T"/공백 뒤에 시각이 있고 끝이 Z 또는 ±HH[:MM] 인 문자열. 날짜만 있는 "2026-11-08"은 제외.
+const HAS_UTC_OFFSET = /[T ].*(?:Z|[+-]\d{2}(?::?\d{2})?)$/i;
+
+/**
+ * 서버가 내려주는 ISO 8601 문자열을 서울 시각의 dayjs로 변환한다.
+ *
+ * `dayjs.tz(str, tz)`는 오프셋이 붙은 문자열("...+09:00", "...Z")을 UTC로 환산한 뒤
+ * 그 시계 값을 그대로 서울 시각으로 읽어서 9시간이 빠진다 (23:59+09:00 → 14:59).
+ * 오프셋이 있으면 절대 시각으로 파싱한 뒤 서울로 변환하고, 없으면 서울 시각으로 간주한다.
+ */
+export function parseSeoul(iso: string): dayjs.Dayjs {
+  return HAS_UTC_OFFSET.test(iso)
+    ? dayjs(iso).tz(SEOUL_TZ)
+    : dayjs.tz(iso, SEOUL_TZ);
+}
+
+/** "2026-11-08"처럼 시각 부분이 아예 없는 문자열인지. */
+function isDateOnly(iso: string): boolean {
+  return !/[T ]\d{1,2}:\d{2}/.test(iso);
+}
+
+/** 서버는 시각을 못 읽은 마감을 23:59(KST)로 내려준다. 이 경우 시각을 표시하지 않는다. */
+function isTimeUnknown(iso: string, d: dayjs.Dayjs): boolean {
+  return isDateOnly(iso) || (d.hour() === 23 && d.minute() === 59);
+}
+
 export type DDayInfo = {
   days: number;
   passed: boolean;
@@ -18,10 +44,8 @@ export type DDayInfo = {
 /** Compute D-day in Asia/Seoul. If time is 23:59, treat as date-only ("당일 마감"). */
 export function computeDDay(deadlineAt: string | null): DDayInfo | null {
   if (!deadlineAt) return null;
-  const dl = dayjs.tz(deadlineAt, SEOUL_TZ);
-  const hour = dl.hour();
-  const minute = dl.minute();
-  const timeUnknown = hour === 23 && minute === 59;
+  const dl = parseSeoul(deadlineAt);
+  const timeUnknown = isTimeUnknown(deadlineAt, dl);
 
   const now = dayjs.tz(new Date(), SEOUL_TZ);
   const today = now.startOf("day");
@@ -46,10 +70,8 @@ export function formatPostedOn(dateStr: string): string {
 
 export function formatDeadline(deadlineAt: string | null): string {
   if (!deadlineAt) return "";
-  const dl = dayjs.tz(deadlineAt, SEOUL_TZ);
-  const hour = dl.hour();
-  const minute = dl.minute();
-  if (hour === 23 && minute === 59) {
+  const dl = parseSeoul(deadlineAt);
+  if (isTimeUnknown(deadlineAt, dl)) {
     return dl.format("YYYY.MM.DD");
   }
   return dl.format("YYYY.MM.DD HH:mm");
@@ -57,7 +79,8 @@ export function formatDeadline(deadlineAt: string | null): string {
 
 export function formatEventAt(eventAt: string | null): string {
   if (!eventAt) return "";
-  return dayjs.tz(eventAt, SEOUL_TZ).format("YYYY.MM.DD HH:mm");
+  const ev = parseSeoul(eventAt);
+  return ev.format(isDateOnly(eventAt) ? "YYYY.MM.DD" : "YYYY.MM.DD HH:mm");
 }
 
 export function todayInSeoul(): dayjs.Dayjs {

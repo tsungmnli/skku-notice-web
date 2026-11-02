@@ -28,7 +28,7 @@ import { NoticeCardSkeleton } from "@/components/common/NoticeCardSkeleton";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useFavoritesLookup } from "./hooks/useFavoritesLookup";
 import { CalendarSubscribeModal } from "./modules/CalendarSubscribeModal";
-import { SEOUL_TZ } from "@/utils/date";
+import { parseSeoul, SEOUL_TZ } from "@/utils/date";
 import classes from "./Favorites.module.css";
 
 export function FavoritesClient() {
@@ -48,7 +48,7 @@ export function FavoritesClient() {
         (date): date is string => date !== null,
       );
       const upcoming = dates
-        .map((date) => dayjs.tz(date, SEOUL_TZ))
+        .map((date) => parseSeoul(date))
         .filter((date) => !date.isBefore(today))
         .sort((a, b) => a.valueOf() - b.valueOf())[0];
       return { upcoming, hasDate: dates.length > 0 };

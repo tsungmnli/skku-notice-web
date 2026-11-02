@@ -4,7 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import dayjs from "dayjs";
 import { api } from "@/lib/api/client";
 import type { Article } from "@/lib/api/types";
-import { SEOUL_TZ, toSeoulDateStr, todayInSeoul } from "@/utils/date";
+import {
+  parseSeoul,
+  SEOUL_TZ,
+  toSeoulDateStr,
+  todayInSeoul,
+} from "@/utils/date";
 
 type Result = {
   key: string;
@@ -78,7 +83,7 @@ export function groupByDate(articles: Article[]): Map<string, Article[]> {
   const map = new Map<string, Article[]>();
   for (const a of articles) {
     if (!a.deadline_at) continue;
-    const dateStr = dayjs.tz(a.deadline_at, SEOUL_TZ).format("YYYY-MM-DD");
+    const dateStr = parseSeoul(a.deadline_at).format("YYYY-MM-DD");
     const arr = map.get(dateStr) || [];
     arr.push(a);
     map.set(dateStr, arr);
