@@ -329,23 +329,51 @@ function NoticesContent() {
               </Group>
             )}
 
-            <Group gap={6} className={classes.quickFilters} aria-label="빠른 기간 필터">
-              <Text size="xs" c="dimmed" className={classes.quickFilterLabel}>
-                빠른 기간
-              </Text>
-              {quickPeriodRanges.map((period) => (
-                <Button
-                  key={period.key}
-                  size="compact-xs"
-                  variant={activeQuickPeriod === period.key ? "filled" : "light"}
-                  color="skku-green"
-                  onClick={() => handleQuickPeriod(period.key)}
-                  aria-pressed={activeQuickPeriod === period.key}
-                >
-                  {period.label}
-                </Button>
-              ))}
-            </Group>
+            <div
+              className={classes.quickFilters}
+              role="group"
+              aria-label="빠른 기간 필터"
+            >
+              <div className={classes.quickFilterHeader}>
+                <div>
+                  <Text size="sm" fw={600}>
+                    빠른 기간
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    마감일 기준으로 바로 찾아보세요
+                  </Text>
+                </div>
+                {activeQuickPeriod && (
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    color="skku-green"
+                    className={classes.quickFilterStatus}
+                  >
+                    선택됨
+                  </Badge>
+                )}
+              </div>
+              <div className={classes.quickFilterOptions}>
+                {quickPeriodRanges.map((period) => {
+                  const isActive = activeQuickPeriod === period.key;
+                  return (
+                    <Button
+                      key={period.key}
+                      size="sm"
+                      variant={isActive ? "filled" : "light"}
+                      color="skku-green"
+                      onClick={() => handleQuickPeriod(period.key)}
+                      aria-pressed={isActive}
+                      data-active={isActive || undefined}
+                      className={classes.quickFilterButton}
+                    >
+                      {period.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Result header: count + sort dropdown */}
             <div className={classes.resultHeader}>
