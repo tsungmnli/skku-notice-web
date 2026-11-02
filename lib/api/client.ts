@@ -56,7 +56,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(text || `요청 실패 (${res.status})`);
+    let detail: unknown;
+
+    try {
+      detail = (JSON.parse(text) as { detail?: unknown }).detail;
+    } catch {
+      detail = undefined;
+    }
+
+    throw new Error(
+      typeof detail === "string" ? detail : text || `요청 실패 (${res.status})`,
+    );
   }
   return res.json() as Promise<T>;
 }

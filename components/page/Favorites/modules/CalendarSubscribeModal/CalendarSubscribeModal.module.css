@@ -8,6 +8,10 @@
   align-self: flex-start;
 }
 
+.notice {
+  line-height: 1.6;
+}
+
 .list {
   padding-left: 4px;
 }
