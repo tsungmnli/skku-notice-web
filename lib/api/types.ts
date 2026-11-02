@@ -10,6 +10,8 @@ export type Article = {
   url: string;
   categories: string[];
   deadline_at: string | null; // ISO 8601
+  event_at: string | null; // ISO 8601, 행사/근무일 시각
+  deadline_source: "title" | "body" | null;
 };
 
 export type ArticleListResponse = {

@@ -8,7 +8,6 @@ import {
   Button,
   ActionIcon,
   Switch,
-  Drawer,
   Paper,
   Center,
   Alert,
@@ -358,44 +357,6 @@ export function CalendarClient() {
           </Center>
         )}
       </Stack>
-
-      {/* Mobile drawer for selected day */}
-      <Drawer
-        opened={selectedDate !== null}
-        onClose={() => setSelectedDate(null)}
-        title={
-          selectedDate
-            ? `${dayjs(selectedDate, "YYYY-MM-DD").format("M월 D일")} 마감 공지`
-            : ""
-        }
-        position="bottom"
-        size="auto"
-        className={classes.mobileDrawer}
-        styles={{
-          content: { maxWidth: "720px", margin: "0 auto" },
-        }}
-      >
-        <ScrollAreaAutosize mah="50vh">
-          {selectedArticles.length > 0 ? (
-            <Stack gap={0}>
-              {selectedArticles.map((article) => (
-                <ArticleCard
-                  key={article.id}
-                  article={article}
-                  isFavorite={isFavorite(article.id)}
-                  onToggleFavorite={toggleFavorite}
-                />
-              ))}
-            </Stack>
-          ) : (
-            <Center p={20}>
-              <Text size="sm" c="dimmed">
-                이 날의 마감 공지가 없습니다
-              </Text>
-            </Center>
-          )}
-        </ScrollAreaAutosize>
-      </Drawer>
     </div>
   );
 }

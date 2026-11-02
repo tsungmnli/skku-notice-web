@@ -44,23 +44,33 @@ function makeArticle(i: number): Article {
 
   // ~40% have deadlines
   let deadlineAt: string | null = null;
+  let deadlineSource: "title" | "body" | null = null;
   if (i % 5 === 0) {
     // deadline passed
     const day = String((i % 10) + 1).padStart(2, "0");
     deadlineAt = `2026-02-${day}T23:59:00+09:00`;
+    deadlineSource = "title";
   } else if (i % 5 === 1) {
     // deadline with time
     const day = String((i % 20) + 5).padStart(2, "0");
     deadlineAt = `2026-10-${day}T17:00:00+09:00`;
+    deadlineSource = "body";
   } else if (i % 5 === 2) {
     // deadline date-only (23:59)
     const day = String((i % 20) + 10).padStart(2, "0");
     deadlineAt = `2026-11-${day}T23:59:00+09:00`;
+    deadlineSource = "title";
   } else if (i % 5 === 3) {
     // near-future deadline
     const day = String((i % 20) + 18).padStart(2, "0");
     deadlineAt = `2026-10-${day}T23:59:00+09:00`;
+    deadlineSource = "body";
   }
+
+  const eventAt =
+    i % 6 === 0
+      ? `2026-11-${String((i % 20) + 3).padStart(2, "0")}T14:00:00+09:00`
+      : null;
 
   const isPinned = i % 7 === 0;
   const viewCount = Math.floor(((i * 37) % 5000) + 50);
@@ -90,6 +100,8 @@ function makeArticle(i: number): Article {
     url: `https://www.skku.edu/skku/campus/skk_community_1.do?article_no=${id}`,
     categories: cats,
     deadline_at: deadlineAt,
+    event_at: eventAt,
+    deadline_source: deadlineSource,
   };
 }
 

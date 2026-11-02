@@ -76,6 +76,12 @@ export function CalendarSubscribeModal({
           </Button>
         </Stack>
 
+        <Text size="xs" c="dimmed" className={classes.notice}>
+          이 피드에는 선택한 공지의 마감 일정과 행사 일정이 함께 포함되며, 이미
+          지난 일정도 포함될 수 있습니다. Google Calendar에서는 일정 반영이
+          대체로 하루 정도 늦을 수 있습니다.
+        </Text>
+
         <Divider />
 
         <Stack gap={6}>
@@ -96,14 +102,15 @@ export function CalendarSubscribeModal({
 
         <Stack gap={6}>
           <Text size="sm" fw={600}>
-            Apple Calendar (iPhone / Mac)
+            Apple Calendar
           </Text>
           <List size="xs" spacing={4} className={classes.list}>
-            <ListItem>설정 &rarr; 캘린더 &rarr; 계정 &rarr; 계정 추가</ListItem>
-            <ListItem>&ldquo;CalDAV 계정 추가&quot; 선택 후 URL 입력</ListItem>
             <ListItem>
-              또는 Mac의 캘린더 앱에서 &ldquo;캘린더 구독&quot; 후 URL 붙여넣기
+              iPhone/iPad: 설정 &rarr; 캘린더 &rarr; 계정 &rarr; 계정 추가
+              &rarr; 기타 &rarr; 구독 캘린더 추가
             </ListItem>
+            <ListItem>Mac: 캘린더 앱의 파일 &rarr; 새로운 캘린더 구독</ListItem>
+            <ListItem>위 URL을 붙여넣어 구독을 완료하세요.</ListItem>
           </List>
         </Stack>
       </Stack>

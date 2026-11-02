@@ -80,25 +80,33 @@
   color: var(--text-muted);
 }
 
-.infoRow {
+.dateRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   min-width: 0;
-  min-height: 20px;
-  overflow: hidden;
 }
 
-.deadlineGroup {
+.deadlineGroup,
+.eventGroup {
   flex: 0 1 auto;
   min-width: 0;
 }
 
-.deadlineDate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.deadlineDate,
+.eventDate {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sourceNote {
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.unknownDate {
+  line-height: 1.45;
 }
 
 .categories {
@@ -120,7 +128,6 @@
 .meta {
   min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
 }
 
 .writer {

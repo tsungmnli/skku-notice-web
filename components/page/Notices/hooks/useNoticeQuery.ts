@@ -24,6 +24,11 @@ export function useNoticeQuery() {
     const dateTo = searchParams.get("date_to");
     if (dateTo) q.date_to = dateTo;
 
+    const deadlineFrom = searchParams.get("deadline_from");
+    if (deadlineFrom) q.deadline_from = deadlineFrom;
+    const deadlineTo = searchParams.get("deadline_to");
+    if (deadlineTo) q.deadline_to = deadlineTo;
+
     const pinned = searchParams.get("pinned");
     if (pinned === "include" || pinned === "exclude" || pinned === "only") {
       q.pinned = pinned as PinnedFilter;

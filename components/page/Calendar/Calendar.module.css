@@ -201,12 +201,13 @@ html[data-mantine-color-scheme="dark"] .dayCell[data-today] .dayNumber {
   border-bottom: 1px solid var(--surface-border);
 }
 
-.mobileDrawer {
-  display: block;
-}
-@media (min-width: 64em) {
-  .mobileDrawer {
-    display: none;
+@media (max-width: 63.99em) {
+  .desktopLayout {
+    gap: var(--sp-3);
+  }
+
+  .detailDesktop {
+    width: 100%;
   }
 }
 

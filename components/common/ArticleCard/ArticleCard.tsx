@@ -9,7 +9,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import type { Article } from "@/lib/api/types";
-import { formatPostedOn, formatDeadline } from "@/utils/date";
+import { formatPostedOn, formatDeadline, formatEventAt } from "@/utils/date";
 import { categoryLabel } from "@/utils/constants";
 import { DeadlineBadge } from "../DeadlineBadge";
 import classes from "./ArticleCard.module.css";
@@ -21,6 +21,7 @@ type Props = {
   faded?: boolean;
   showRemove?: boolean;
   onRemove?: (id: number) => void;
+  showDateUnknown?: boolean;
 };
 
 export function ArticleCard({
@@ -30,6 +31,7 @@ export function ArticleCard({
   faded,
   showRemove,
   onRemove,
+  showDateUnknown = false,
 }: Props) {
   return (
     <article
@@ -91,41 +93,56 @@ export function ArticleCard({
             <IconExternalLink size={14} className={classes.externalIcon} />
           </div>
 
-          {(article.deadline_at || article.categories.length > 0) && (
-            <div className={classes.infoRow}>
+          {(article.deadline_at || article.event_at) && (
+            <div className={classes.dateRow}>
               {article.deadline_at && (
                 <Group
                   gap={8}
                   align="center"
-                  wrap="nowrap"
+                  wrap="wrap"
                   className={classes.deadlineGroup}
                 >
                   <DeadlineBadge deadlineAt={article.deadline_at} size="sm" />
                   <Text size="xs" c="dimmed" className={classes.deadlineDate}>
                     {formatDeadline(article.deadline_at)}
                   </Text>
+                  {article.deadline_source === "body" && (
+                    <Text size="xs" c="dimmed" className={classes.sourceNote}>
+                      본문 기준
+                    </Text>
+                  )}
                 </Group>
               )}
-              {article.categories.length > 0 && (
-                <Group gap={4} wrap="nowrap" className={classes.categories}>
-                  {article.categories.slice(0, 3).map((code) => (
-                    <Badge
-                      key={code}
-                      size="xs"
-                      variant="light"
-                      color="gray"
-                      radius="sm"
-                      className={classes.catBadge}
-                    >
-                      {categoryLabel(code)}
-                    </Badge>
-                  ))}
+              {article.event_at && (
+                <Group
+                  gap={6}
+                  align="center"
+                  wrap="nowrap"
+                  className={classes.eventGroup}
+                >
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    color="skku-green"
+                    radius="sm"
+                  >
+                    행사
+                  </Badge>
+                  <Text size="xs" c="dimmed" className={classes.eventDate}>
+                    {formatEventAt(article.event_at)}
+                  </Text>
                 </Group>
               )}
             </div>
           )}
 
-          <Group gap="xs" align="center" wrap="nowrap" className={classes.meta}>
+          {showDateUnknown && !article.deadline_at && !article.event_at && (
+            <Text size="xs" c="dimmed" className={classes.unknownDate}>
+              날짜를 읽지 못했을 수 있어요. 원문을 확인해 보세요.
+            </Text>
+          )}
+
+          <Group gap="xs" align="center" wrap="wrap" className={classes.meta}>
             <Text size="xs" c="dimmed" className={classes.writer}>
               {article.writer}
             </Text>
@@ -135,6 +152,22 @@ export function ArticleCard({
             <Text size="xs" c="dimmed" className={classes.date}>
               {formatPostedOn(article.posted_on)}
             </Text>
+            {article.categories.length > 0 && (
+              <Group gap={4} wrap="wrap" className={classes.categories}>
+                {article.categories.slice(0, 3).map((code) => (
+                  <Badge
+                    key={code}
+                    size="xs"
+                    variant="light"
+                    color="gray"
+                    radius="sm"
+                    className={classes.catBadge}
+                  >
+                    {categoryLabel(code)}
+                  </Badge>
+                ))}
+              </Group>
+            )}
             {article.view_count !== null && (
               <>
                 <Text size="xs" c="dimmed" className={classes.dot}>
