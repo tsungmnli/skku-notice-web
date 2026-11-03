@@ -10,7 +10,7 @@ export type Article = {
   url: string;
   categories: string[];
   deadline_at: string | null; // ISO 8601
-  event_at: string | null; // ISO 8601, 행사/근무일 시각
+  event_at: string | null; // 행사/근무일. 시각을 알면 ISO 8601, 모르면 날짜만 ("2026-11-20")
   deadline_source: "title" | "body" | null;
 };
 

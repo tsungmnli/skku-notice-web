@@ -89,7 +89,9 @@ export function formatDeadline(deadlineAt: string | null): string {
 export function formatEventAt(eventAt: string | null): string {
   if (!eventAt) return "";
   const ev = parseSeoul(eventAt);
-  return ev.format(isDateOnly(eventAt) ? "YYYY.MM.DD" : "YYYY.MM.DD HH:mm");
+  return ev.format(
+    isTimeUnknown(eventAt, ev) ? "YYYY.MM.DD" : "YYYY.MM.DD HH:mm",
+  );
 }
 
 export function todayInSeoul(): dayjs.Dayjs {

@@ -67,9 +67,13 @@ function makeArticle(i: number): Article {
     deadlineSource = "body";
   }
 
+  // 시각을 모르는 행사는 날짜만 내려온다 ("2026-11-05"). 마감은 23:59 를 그대로 가진다.
+  const eventDay = `2026-11-${String((i % 20) + 3).padStart(2, "0")}`;
   const eventAt =
     i % 6 === 0
-      ? `2026-11-${String((i % 20) + 3).padStart(2, "0")}T14:00:00+09:00`
+      ? i % 12 === 0
+        ? eventDay
+        : `${eventDay}T14:00:00+09:00`
       : null;
 
   const isPinned = i % 7 === 0;
