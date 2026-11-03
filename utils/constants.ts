@@ -26,3 +26,9 @@ export const PINNED_LABELS: Record<string, string> = {
   exclude: "제외",
   only: "고정만",
 };
+
+/** 서버가 받는 검색어 최대 길이 (초과하면 422). */
+export const SEARCH_MAX_LENGTH = 100;
+
+/** 서버가 받는 page 상한 (초과하면 422). */
+export const MAX_PAGE = 100_000;

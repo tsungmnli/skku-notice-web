@@ -39,7 +39,11 @@ import { useNotices } from "./hooks/useNotices";
 import { useFilterOptions } from "./hooks/useFilterOptions";
 import { useNoticeQuery } from "./hooks/useNoticeQuery";
 import { FilterPanel } from "./modules/FilterPanel";
-import { SORT_LABELS, categoryLabel } from "@/utils/constants";
+import {
+  SEARCH_MAX_LENGTH,
+  SORT_LABELS,
+  categoryLabel,
+} from "@/utils/constants";
 import type { SortKey } from "@/lib/api/types";
 import { QUICK_DUE_OPTIONS, type QuickDueKey } from "@/utils/date";
 import classes from "./Notices.module.css";
@@ -190,6 +194,7 @@ function NoticesContent() {
                 leftSection={<IconSearch size={18} />}
                 value={activeSearchInput}
                 onChange={(e) => setActiveSearchInput(e.target.value)}
+                maxLength={SEARCH_MAX_LENGTH}
                 aria-label="공지사항 검색"
                 className={classes.searchInput}
                 rightSection={

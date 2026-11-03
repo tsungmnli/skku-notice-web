@@ -26,6 +26,7 @@ import dayjs from "dayjs";
 import { ArticleCard } from "@/components/common/ArticleCard";
 import { NoticeCardSkeleton } from "@/components/common/NoticeCardSkeleton";
 import { useFavorites } from "@/hooks/useFavorites";
+import { calendarFeedUrl } from "@/lib/api/client";
 import { useFavoritesLookup } from "./hooks/useFavoritesLookup";
 import { CalendarSubscribeModal } from "./modules/CalendarSubscribeModal";
 import { parseSeoul, SEOUL_TZ } from "@/utils/date";
@@ -72,14 +73,7 @@ export function FavoritesClient() {
     };
   }, [data]);
 
-  const calendarUrl = useMemo(() => {
-    const base =
-      process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000/api/v1";
-    const ids = favorites.slice(0, 100);
-    if (ids.length === 0) return "";
-    const params = ids.map((id) => `id=${id}`).join("&");
-    return `${base}/calendar?${params}`;
-  }, [favorites]);
+  const calendarUrl = useMemo(() => calendarFeedUrl(favorites), [favorites]);
 
   const handleSubscribe = () => {
     if (favorites.length === 0) return;

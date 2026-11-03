@@ -56,3 +56,58 @@ export type ArticleQuery = {
   deadline_from?: string;
   deadline_to?: string;
 };
+
+export type User = {
+  id: string;
+  email: string;
+  name: string | null;
+  email_verified: boolean;
+  has_password: boolean;
+  google_linked: boolean;
+  created_at: string;
+};
+
+export type LoginResponse = {
+  user: User;
+  token: string | null;
+  expires_at: string;
+};
+
+export type Detail = {
+  detail: string;
+};
+
+export type RegisterBody = {
+  email: string;
+  password: string;
+  name?: string;
+  turnstile_token?: string;
+};
+
+export type LoginBody = {
+  email: string;
+  password: string;
+};
+
+export type ResetPasswordBody = {
+  token: string;
+  password: string;
+};
+
+export type DeleteMeBody = {
+  password?: string;
+};
+
+export type AuthErrorCode =
+  | "invalid_token"
+  | "captcha_failed"
+  | "invalid_client"
+  | "not_authenticated"
+  | "invalid_credentials"
+  | "email_not_verified"
+  | "reauth_required"
+  | "origin_not_allowed"
+  | "google_disabled"
+  | "google_conflict"
+  | "payload_too_large"
+  | "rate_limited";

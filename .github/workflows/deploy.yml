@@ -50,6 +50,24 @@ jobs:
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
           echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
+      # 키가 비어 있으면 빌드는 통과하지만 배포된 회원가입 화면이 "사용할 수 없음"으로 막힌다.
+      # main 에서만 검사한다 (포크 PR 에는 repo variable 이 전달되지 않는다).
+      - name: Turnstile site key 확인
+        if: github.ref == 'refs/heads/main'
+        env:
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+        run: |
+          if [ -z "$TURNSTILE_SITE_KEY" ]; then
+            echo "::error::repo variable TURNSTILE_SITE_KEY 가 비어 있습니다 (Settings > Secrets and variables > Actions > Variables)"
+            exit 1
+          fi
+          case "$TURNSTILE_SITE_KEY" in
+            [123]x0000*)
+              echo "::error::TURNSTILE_SITE_KEY 가 Cloudflare 테스트 키입니다. 운영 위젯의 site key 를 넣으세요"
+              exit 1
+              ;;
+          esac
+
       # arm64 빌드는 main 에서만 한다 (QEMU 라서 느리다)
       - uses: docker/setup-qemu-action@v3
         if: github.ref == 'refs/heads/main'
@@ -64,10 +82,13 @@ jobs:
           tags: web-smoke:ci
           build-args: |
             NEXT_PUBLIC_API_BASE=${{ env.API_BASE }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.TURNSTILE_SITE_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: 스모크 테스트
+        env:
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
         run: |
           docker run -d --name web-smoke -p 3000:3000 web-smoke:ci
           for i in $(seq 1 30); do
@@ -75,11 +96,21 @@ jobs:
             sleep 2
           done
           # 모든 화면이 열리는지
-          for p in / /favorites /calendar; do
+          for p in / /favorites /calendar /login /signup /forgot-password /reset-password /verify-email /account /terms /policy; do
             curl -fsS -o /dev/null "http://localhost:3000${p}"
           done
           # API 주소가 번들에 박혀 있는지 (빠지면 브라우저가 localhost 로 요청을 보낸다)
           docker exec web-smoke grep -rlF "${API_BASE}" /app/.next/static > /dev/null
+          # mock 구현이 브라우저 번들에 실리지 않았는지 (production 에서는 쓰이지 않는 코드다)
+          # grep 은 `!` 로 부정하면 set -e 에 안 걸리므로 if 로 쓴다
+          if docker exec web-smoke grep -rlF "skku-mock-auth" /app/.next/static; then
+            echo "::error::mock 코드가 번들에 포함되어 있습니다 (lib/api/client.ts 의 mock() 분기 확인)"
+            exit 1
+          fi
+          # main 에서는 Turnstile site key 가 번들에 박혀 있는지
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            docker exec web-smoke grep -rlF "${TURNSTILE_SITE_KEY}" /app/.next/static > /dev/null
+          fi
           # root 로 실행되고 있지 않은지
           test "$(docker exec web-smoke id -u)" != "0"
 
@@ -105,6 +136,7 @@ jobs:
           tags: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
           build-args: |
             NEXT_PUBLIC_API_BASE=${{ env.API_BASE }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.TURNSTILE_SITE_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false

@@ -1,0 +1,1 @@
+export { ForgotPasswordClient } from "./ForgotPassword";

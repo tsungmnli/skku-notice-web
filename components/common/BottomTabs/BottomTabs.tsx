@@ -6,9 +6,16 @@ import {
   UnstyledButton,
   useMantineColorScheme,
 } from "@mantine/core";
-import { IconBell, IconStar, IconCalendar } from "@tabler/icons-react";
+import {
+  IconBell,
+  IconStar,
+  IconCalendar,
+  IconUserCircle,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { safeNext } from "@/lib/auth/safeNext";
 import classes from "./BottomTabs.module.css";
 
 const tabs = [
@@ -20,6 +27,18 @@ const tabs = [
 export function BottomTabs() {
   const pathname = usePathname();
   const { colorScheme } = useMantineColorScheme();
+  const { status } = useAuth();
+
+  const accountHref =
+    status === "authenticated"
+      ? "/account"
+      : `/login?next=${encodeURIComponent(safeNext(pathname))}`;
+  const accountActive = pathname === "/account";
+
+  const activeColor =
+    colorScheme === "dark"
+      ? "var(--mantine-color-skku-green-4)"
+      : "var(--mantine-color-skku-green-6)";
 
   return (
     <nav className={classes.nav} aria-label="하단 탭">
@@ -38,13 +57,7 @@ export function BottomTabs() {
                 <Icon
                   size={22}
                   stroke={active ? 2.2 : 1.8}
-                  color={
-                    active
-                      ? colorScheme === "dark"
-                        ? "var(--mantine-color-skku-green-4)"
-                        : "var(--mantine-color-skku-green-6)"
-                      : "var(--mantine-color-gray-5)"
-                  }
+                  color={active ? activeColor : "var(--mantine-color-gray-5)"}
                 />
                 <Text
                   size="xs"
@@ -58,6 +71,26 @@ export function BottomTabs() {
           </Link>
         );
       })}
+      <Link href={accountHref} className={classes.link} aria-label="계정">
+        <UnstyledButton className={classes.button} data-active={accountActive}>
+          <Group gap={4} align="center" wrap="nowrap">
+            <IconUserCircle
+              size={22}
+              stroke={accountActive ? 2.2 : 1.8}
+              color={
+                accountActive ? activeColor : "var(--mantine-color-gray-5)"
+              }
+            />
+            <Text
+              size="xs"
+              fw={accountActive ? 600 : 500}
+              c={accountActive ? "var(--mantine-color-skku-green-6)" : "dimmed"}
+            >
+              {status === "authenticated" ? "계정" : "로그인"}
+            </Text>
+          </Group>
+        </UnstyledButton>
+      </Link>
     </nav>
   );
 }

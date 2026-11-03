@@ -25,6 +25,11 @@ export function parseSeoul(iso: string): dayjs.Dayjs {
     : dayjs.tz(iso, SEOUL_TZ);
 }
 
+/** "YYYY-MM-DD" 형식이면서 실제로 있는 날짜인지 ("2026-02-31"은 false). 서버는 없는 날짜를 422 로 거절한다. */
+export function isIsoDate(value: string): boolean {
+  return dayjs(value, "YYYY-MM-DD", true).isValid();
+}
+
 /** "2026-11-08"처럼 시각 부분이 아예 없는 문자열인지. */
 function isDateOnly(iso: string): boolean {
   return !/[T ]\d{1,2}:\d{2}/.test(iso);
@@ -62,6 +67,10 @@ export function computeDDay(deadlineAt: string | null): DDayInfo | null {
   }
 
   return { days: diff, passed: diff < 0, label };
+}
+
+export function formatSeoulDate(dateStr: string): string {
+  return parseSeoul(dateStr).format("YYYY.MM.DD");
 }
 
 export function formatPostedOn(dateStr: string): string {

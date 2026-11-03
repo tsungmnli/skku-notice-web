@@ -213,3 +213,15 @@ export async function mockCalendarDeadlines(
 }
 
 export { computeDDay };
+export {
+  mockDeleteMe,
+  mockForgotPassword,
+  mockGetMe,
+  mockGoogleLogin,
+  mockLogin,
+  mockLogout,
+  mockRegister,
+  mockResendVerification,
+  mockResetPassword,
+  mockVerifyEmail,
+} from "./auth";

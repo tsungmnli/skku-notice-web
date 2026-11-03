@@ -1,8 +1,13 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { isMockMode } from "@/lib/auth/config";
 
-const STORAGE_KEY = "skku-notice-favorites";
+// mock 의 공지 id(1000~)와 실제 DB id 는 서로 무관하다. 같은 브라우저에서 두 모드를
+// 오가도 즐겨찾기가 엉뚱한 공지를 가리키지 않게 저장 키를 분리한다. (real 키는 그대로)
+const STORAGE_KEY = isMockMode
+  ? "skku-notice-favorites:mock"
+  : "skku-notice-favorites";
 const CHANGE_EVENT = "favorites-changed";
 const EMPTY: number[] = [];
 

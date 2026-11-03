@@ -1,0 +1,1 @@
+export { ResetPasswordClient } from "./ResetPassword";

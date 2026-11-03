@@ -7,16 +7,19 @@ import { theme } from "@/theme";
 import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { BottomTabs } from "@/components/common/BottomTabs";
+import { AuthProvider } from "@/components/common/AuthProvider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
       <ModalsProvider>
         <Notifications position="top-center" />
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <BottomTabs />
+        <AuthProvider>
+          <Header />
+          <main>{children}</main>
+          <Footer />
+          <BottomTabs />
+        </AuthProvider>
       </ModalsProvider>
     </MantineProvider>
   );

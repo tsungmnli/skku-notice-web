@@ -1,0 +1,41 @@
+.page {
+  padding: var(--sp-6) var(--container-px) var(--sp-7);
+  max-width: 720px;
+}
+
+.title {
+  line-height: 1.25;
+}
+
+.clause {
+  scroll-margin-top: var(--header-h);
+}
+
+.clauseTitle {
+  line-height: 1.25;
+  font-size: var(--mantine-font-size-md);
+  margin-bottom: var(--sp-1);
+}
+
+.clauseBody {
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.tocLink {
+  font-size: var(--mantine-font-size-sm);
+  color: var(--mantine-color-dimmed);
+  text-decoration: none;
+  display: block;
+}
+
+.tocLink:hover {
+  text-decoration: underline;
+  color: var(--accent-green);
+}
+
+@media (max-width: 35.99em) {
+  .page {
+    padding: var(--sp-4) 12px var(--sp-7);
+  }
+}
