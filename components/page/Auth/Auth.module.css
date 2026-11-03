@@ -1,0 +1,74 @@
+.page {
+  min-height: 520px;
+  padding: var(--sp-6) var(--container-px) var(--sp-7);
+}
+
+.card {
+  width: min(100%, 440px);
+  margin: 0 auto;
+  padding: var(--sp-5);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 12%);
+}
+
+.heading {
+  line-height: 1.25;
+}
+
+.subtle {
+  line-height: 1.6;
+}
+
+.form {
+  width: 100%;
+}
+
+.actions {
+  padding-top: var(--sp-1);
+}
+
+.fullButton {
+  min-height: 44px;
+}
+
+.helper {
+  line-height: 1.6;
+}
+
+.links {
+  width: 100%;
+  padding-top: var(--sp-1);
+  border-top: 1px solid var(--surface-border);
+}
+
+.link {
+  color: var(--accent-green);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.legal {
+  line-height: 1.55;
+}
+
+.legalLink {
+  color: var(--accent-green);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 35.99em) {
+  .page {
+    padding: var(--sp-4) 12px var(--sp-7);
+  }
+
+  .card {
+    padding: var(--sp-4);
+  }
+}
