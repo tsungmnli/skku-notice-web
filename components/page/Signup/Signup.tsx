@@ -13,7 +13,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { AuthLayout } from "@/components/page/Auth";
+import { AuthLayout, GoogleButton } from "@/components/page/Auth";
 import { TurnstileWidget } from "@/components/common/TurnstileWidget/TurnstileWidget";
 import { ApiError, api } from "@/lib/api/client";
 import { turnstileUnavailable } from "@/lib/auth/config";
@@ -36,6 +36,7 @@ export function SignupClient() {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") router.replace("/");
@@ -136,6 +137,12 @@ export function SignupClient() {
     } finally {
       setResendLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    if (!termsAgreed || !policyAgreed) return;
+    setGoogleLoading(true);
+    window.location.assign(api.googleLoginUrl());
   };
 
   if (status === "loading" || status === "authenticated") return null;
@@ -295,6 +302,12 @@ export function SignupClient() {
         <Text size="xs" c="dimmed" className={classes.subtle}>
           로그인은 선택 사항입니다. 로그인하지 않아도 모든 공지를 그대로 볼 수 있습니다.
         </Text>
+
+        <GoogleButton
+          onClick={handleGoogleLogin}
+          loading={googleLoading}
+          disabled={!termsAgreed || !policyAgreed}
+        />
       </Stack>
     </AuthLayout>
   );

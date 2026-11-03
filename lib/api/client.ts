@@ -216,6 +216,7 @@ export type ApiClient = {
   resetPassword: (token: string, password: string) => Promise<Detail>;
   getMe: () => Promise<User>;
   deleteMe: (password?: string) => Promise<void>;
+  googleLogin: () => Promise<LoginResponse>;
   googleLoginUrl: (next?: string) => string;
 };
 
@@ -234,6 +235,9 @@ const realApi: ApiClient = {
   resetPassword: realResetPassword,
   getMe: realGetMe,
   deleteMe: realDeleteMe,
+  googleLogin: () => {
+    throw new Error("googleLogin은 mock 모드에서만 사용합니다.");
+  },
   googleLoginUrl,
 };
 
@@ -253,6 +257,7 @@ const mockApi: ApiClient = {
     (await mock()).mockResetPassword(token, password),
   getMe: async () => (await mock()).mockGetMe(),
   deleteMe: async (password) => (await mock()).mockDeleteMe(password),
+  googleLogin: async () => (await mock()).mockGoogleLogin(),
   googleLoginUrl,
 };
 

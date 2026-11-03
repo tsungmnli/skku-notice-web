@@ -13,7 +13,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { IconArrowRight, IconMailForward } from "@tabler/icons-react";
-import { AuthLayout } from "@/components/page/Auth";
+import { AuthLayout, GoogleButton } from "@/components/page/Auth";
 import { ApiError, api } from "@/lib/api/client";
 import { safeNext } from "@/lib/auth/safeNext";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +33,7 @@ export function LoginClient() {
   const { status, signIn } = useAuth();
   const nextPath = safeNext(searchParams.get("next"));
   const googleError = searchParams.get("error");
+  const mockGoogle = searchParams.get("mock_google");
   const googleErrorMessage = googleError
     ? GOOGLE_ERROR_MESSAGES[googleError] || "로그인에 실패했습니다. 다시 시도해 주세요."
     : null;
@@ -44,6 +45,23 @@ export function LoginClient() {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (!mockGoogle || status === "loading") return;
+    setGoogleLoading(true);
+    void (async () => {
+      try {
+        const result = await api.googleLogin();
+        signIn(result.user);
+        router.replace(nextPath);
+      } catch {
+        router.replace("/login");
+      } finally {
+        setGoogleLoading(false);
+      }
+    })();
+  }, [mockGoogle, nextPath, router, signIn, status]);
 
   useEffect(() => {
     if (status === "authenticated") router.replace(nextPath);
@@ -114,6 +132,10 @@ export function LoginClient() {
     } finally {
       setResendLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.assign(api.googleLoginUrl(nextPath));
   };
 
   if (status === "loading" || status === "authenticated") return null;
@@ -208,6 +230,8 @@ export function LoginClient() {
             </Text>
           </Group>
         </Stack>
+
+        <GoogleButton onClick={handleGoogleLogin} loading={googleLoading} />
       </Stack>
     </AuthLayout>
   );

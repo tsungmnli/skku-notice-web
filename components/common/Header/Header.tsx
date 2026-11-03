@@ -1,15 +1,25 @@
 "use client";
 
 import {
+  ActionIcon,
   Button,
   Group,
-  ActionIcon,
-  useMantineColorScheme,
+  Menu,
   Text,
+  useMantineColorScheme,
 } from "@mantine/core";
-import { IconSun, IconMoon, IconStar } from "@tabler/icons-react";
+import {
+  IconSun,
+  IconMoon,
+  IconStar,
+  IconUserCircle,
+  IconLogout,
+  IconChevronDown,
+} from "@tabler/icons-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { safeNext } from "@/lib/auth/safeNext";
 import classes from "./Header.module.css";
 
 const navItems = [
@@ -21,6 +31,15 @@ const navItems = [
 export function Header() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const pathname = usePathname();
+  const router = useRouter();
+  const { status, user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.replace("/");
+  };
+
+  const loginHref = `/login?next=${encodeURIComponent(safeNext(pathname))}`;
 
   return (
     <header className={classes.header}>
@@ -58,18 +77,74 @@ export function Header() {
           })}
         </Group>
 
-        <ActionIcon
-          onClick={toggleColorScheme}
-          variant="subtle"
-          color="gray"
-          aria-label="색상 테마 전환"
-        >
-          {colorScheme === "dark" ? (
-            <IconSun size={20} />
+        <Group gap="sm" align="center" className={classes.actions}>
+          {status === "loading" ? (
+            <Button variant="subtle" color="gray" size="sm" visibleFrom="36em" disabled loading>
+              로그인
+            </Button>
+          ) : status === "authenticated" && user ? (
+            <Menu shadow="md" width={240} position="bottom-end">
+              <Menu.Target>
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  leftSection={<IconUserCircle size={18} />}
+                  rightSection={<IconChevronDown size={14} />}
+                  styles={{ root: { maxWidth: 160 } }}
+                >
+                  <span className={classes.userLabel}>
+                    {user.name || user.email}
+                  </span>
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label>
+                  <Text size="xs" c="dimmed">{user.email}</Text>
+                </Menu.Label>
+                <Menu.Item
+                  leftSection={<IconUserCircle size={16} />}
+                  component={Link}
+                  href="/account"
+                >
+                  내 계정
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item
+                  leftSection={<IconLogout size={16} />}
+                  onClick={handleLogout}
+                  color="red"
+                >
+                  로그아웃
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
           ) : (
-            <IconMoon size={20} />
+            <Button
+              component={Link}
+              href={loginHref}
+              variant="light"
+              color="skku-green"
+              size="sm"
+              visibleFrom="36em"
+            >
+              로그인
+            </Button>
           )}
-        </ActionIcon>
+
+          <ActionIcon
+            onClick={toggleColorScheme}
+            variant="subtle"
+            color="gray"
+            aria-label="색상 테마 전환"
+          >
+            {colorScheme === "dark" ? (
+              <IconSun size={20} />
+            ) : (
+              <IconMoon size={20} />
+            )}
+          </ActionIcon>
+        </Group>
       </div>
     </header>
   );

@@ -64,6 +64,10 @@ export function todayInSeoul(): dayjs.Dayjs {
   return dayjs.tz(new Date(), SEOUL_TZ);
 }
 
+export function formatSeoulDate(dateStr: string): string {
+  return dayjs.tz(dateStr, SEOUL_TZ).format("YYYY.MM.DD");
+}
+
 export function toSeoulDateStr(d: dayjs.Dayjs): string {
   return d.tz(SEOUL_TZ).format("YYYY-MM-DD");
 }

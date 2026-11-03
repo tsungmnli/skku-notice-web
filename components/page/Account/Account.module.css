@@ -1,0 +1,36 @@
+.page {
+  min-height: 520px;
+  padding: var(--sp-6) var(--container-px) var(--sp-7);
+}
+
+.infoCard {
+  padding: var(--sp-4);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  gap: var(--sp-3);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: 28px;
+}
+
+.label {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.value {
+  text-align: right;
+  word-break: break-all;
+}
+
+@media (max-width: 35.99em) {
+  .page {
+    padding: var(--sp-4) 12px var(--sp-7);
+  }
+}

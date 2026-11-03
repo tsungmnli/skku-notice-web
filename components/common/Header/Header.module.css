@@ -35,6 +35,16 @@
   justify-content: flex-start;
 }
 
+.actions {
+  flex-shrink: 0;
+}
+
+.userLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .activeNav {
   color: var(--text-primary) !important;
   background: var(--surface-hover) !important;
@@ -46,6 +56,12 @@
 
 @media (max-width: 35.99em) {
   .nav {
+    display: none;
+  }
+}
+
+@media (min-width: 36em) {
+  .mobileAccountTab {
     display: none;
   }
 }
