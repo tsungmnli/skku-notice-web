@@ -25,10 +25,12 @@
 ## Decisions, constraints & rationale
 
 - 인증 API 계약과 mock 인증 기반만 1단계로 구현하고, 인증 화면·라우트는 범위 밖으로 유지
+- `useAuth()`는 `status`, `user`, `signIn`, `signOut`, `refresh`를 모두 제공
+- `AuthProvider`는 Mantine `Notifications`가 마운트된 `ModalsProvider` 내부에 배치됨
 - API 선택은 기존 `client.ts`의 단일 진입점을 유지
-- `googleLoginUrl()` 안에서만 mock/실제 API URL을 분기
+- `mock_google` 분기는 `googleLoginUrl()` 한 곳에만 존재
   - mock: 안전한 `next`를 포함한 `/login?mock_google=1&next=...`
-  - 운영 API: 계약상의 실제 Google 로그인 URL
+  - 실제 API: `API_BASE/auth/google?next=<안전한 next 값>`
 - mock 인증 데이터는 `skku-mock-auth` localStorage 저장소에 계정·세션·인증 토큰·비밀번호 재설정 토큰을 함께 보관
 - mock에서는 실제 보안 해시를 흉내 내지 않고 평문 비밀번호를 사용
 - mock 메일은 저장 데이터가 아니라 모듈 간 이벤트 계약으로 전달하며, `AuthProvider`가 받아 Mantine 알림과 링크 이동을 담당
@@ -37,6 +39,9 @@
 - 204 응답은 `void`로 처리하고, 네트워크 오류·인증 오류·rate limit·captcha 실패를 API 계층에서 구분
 - `safeNext` 유틸로 외부 또는 안전하지 않은 redirect를 차단하고 내부 경로만 허용
 - Turnstile 사이트 키는 환경 설정에 따라 결정하며 Docker build ARG/ENV 연결을 지원
+- mock 모듈은 동적 import로 운영 코드와 별도 번들이 되도록 구성되어 있으나, 확인 시점에 `.next` 산출물이 없어 실제 청크 분리는 검증하지 못함
+- 현재 mock의 429 처리는 로그인 실패와 메일 요청에 한정됨
+- verify-email, reset-password(IP 기준 시간당 30회), DELETE `/me`(비밀번호 5회 실패)의 별도 mock rate limit은 아직 구현되지 않음
 - 타입 검사와 lint/build가 품질 게이트이며, 제거된 UI나 legacy 참조를 남기지 않음
 - 현재 단계의 mock 가입·로그인 흐름은 화면이 연결된 다음 단계에서 실제로 확인 가능
 
@@ -47,3 +52,5 @@
 - mock 메일 알림의 구체적인 문구와 표시 시간은 인증 화면 연결 시 조정 가능
 - 데스크톱/태블릿 캘린더 상세 레이아웃은 아직 미정
 - inline 공지 패널의 전환 시간·easing은 아직 미정
+- 실제 production 번들에서 mock 청크 분리가 유지되는지는 `.next` 생성 후 재검증 필요
+- 이메일 인증·비밀번호 재설정·계정 삭제의 mock rate limit 추가 여부와 정책은 미정; 현재 단계에서는 추가하지 않음
