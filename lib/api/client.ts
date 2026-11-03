@@ -5,7 +5,16 @@ import type {
   Category,
   LookupResponse,
   Writer,
+  Detail,
+  LoginBody,
+  LoginResponse,
+  RegisterBody,
+  User,
 } from "./types";
+import { ApiError } from "./errors";
+import { safeNext } from "@/lib/auth/safeNext";
+
+export { ApiError } from "./errors";
 
 const ENV_API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -53,22 +62,50 @@ function toSearchParams(
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, init);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, init);
+  } catch {
+    throw new ApiError("네트워크 연결을 확인해 주세요.", 0);
+  }
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    let detail: unknown;
+    let body: { detail?: unknown; code?: unknown } = {};
 
     try {
-      detail = (JSON.parse(text) as { detail?: unknown }).detail;
+      const parsed: unknown = JSON.parse(text);
+      if (typeof parsed === "object" && parsed !== null) {
+        body = parsed as { detail?: unknown; code?: unknown };
+      }
     } catch {
-      detail = undefined;
+      body = {};
     }
 
-    throw new Error(
-      typeof detail === "string" ? detail : text || `요청 실패 (${res.status})`,
+    const retryAfterHeader = res.headers.get("Retry-After");
+    const retryAfter = retryAfterHeader ? Number(retryAfterHeader) : undefined;
+    throw new ApiError(
+      typeof body.detail === "string"
+        ? body.detail
+        : text || `요청 실패 (${res.status})`,
+      res.status,
+      typeof body.code === "string" ? body.code : undefined,
+      retryAfter !== undefined && Number.isFinite(retryAfter)
+        ? retryAfter
+        : undefined,
     );
   }
+
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+async function authRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return request<T>(path, { ...init, headers, credentials: "include" });
 }
 
 async function realListArticles(
@@ -102,6 +139,63 @@ async function realListWriters(q?: string, limit?: number): Promise<Writer[]> {
   return request<Writer[]>(`/writers?${sp.toString()}`);
 }
 
+async function realRegister(body: RegisterBody): Promise<Detail> {
+  return authRequest<Detail>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+async function realVerifyEmail(token: string): Promise<Detail> {
+  return authRequest<Detail>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+async function realResendVerification(email: string): Promise<Detail> {
+  return authRequest<Detail>("/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+async function realLogin(body: LoginBody): Promise<LoginResponse> {
+  return authRequest<LoginResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+async function realLogout(): Promise<void> {
+  return authRequest<void>("/auth/logout", { method: "POST" });
+}
+
+async function realForgotPassword(email: string): Promise<Detail> {
+  return authRequest<Detail>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+async function realResetPassword(token: string, password: string): Promise<Detail> {
+  return authRequest<Detail>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  });
+}
+
+async function realGetMe(): Promise<User> {
+  return authRequest<User>("/me");
+}
+
+async function realDeleteMe(password?: string): Promise<void> {
+  return authRequest<void>("/me", {
+    method: "DELETE",
+    body: password === undefined ? undefined : JSON.stringify({ password }),
+  });
+}
+
 // Lazy-load mock module only when needed (avoids importing mock data in real mode)
 async function mock() {
   return await import("../mock/handlers");
@@ -113,6 +207,16 @@ export type ApiClient = {
   lookupArticles: (ids: number[]) => Promise<LookupResponse>;
   listCategories: () => Promise<Category[]>;
   listWriters: (q?: string, limit?: number) => Promise<Writer[]>;
+  register: (body: RegisterBody) => Promise<Detail>;
+  verifyEmail: (token: string) => Promise<Detail>;
+  resendVerification: (email: string) => Promise<Detail>;
+  login: (body: LoginBody) => Promise<LoginResponse>;
+  logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<Detail>;
+  resetPassword: (token: string, password: string) => Promise<Detail>;
+  getMe: () => Promise<User>;
+  deleteMe: (password?: string) => Promise<void>;
+  googleLoginUrl: (next?: string) => string;
 };
 
 const realApi: ApiClient = {
@@ -121,6 +225,16 @@ const realApi: ApiClient = {
   lookupArticles: realLookupArticles,
   listCategories: realListCategories,
   listWriters: realListWriters,
+  register: realRegister,
+  verifyEmail: realVerifyEmail,
+  resendVerification: realResendVerification,
+  login: realLogin,
+  logout: realLogout,
+  forgotPassword: realForgotPassword,
+  resetPassword: realResetPassword,
+  getMe: realGetMe,
+  deleteMe: realDeleteMe,
+  googleLoginUrl,
 };
 
 const mockApi: ApiClient = {
@@ -129,9 +243,28 @@ const mockApi: ApiClient = {
   lookupArticles: async (ids) => (await mock()).mockLookupArticles(ids),
   listCategories: async () => (await mock()).mockListCategories(),
   listWriters: async (q, limit) => (await mock()).mockListWriters(q, limit),
+  register: async (body) => (await mock()).mockRegister(body),
+  verifyEmail: async (token) => (await mock()).mockVerifyEmail(token),
+  resendVerification: async (email) => (await mock()).mockResendVerification(email),
+  login: async (body) => (await mock()).mockLogin(body),
+  logout: async () => (await mock()).mockLogout(),
+  forgotPassword: async (email) => (await mock()).mockForgotPassword(email),
+  resetPassword: async (token, password) =>
+    (await mock()).mockResetPassword(token, password),
+  getMe: async () => (await mock()).mockGetMe(),
+  deleteMe: async (password) => (await mock()).mockDeleteMe(password),
+  googleLoginUrl,
 };
 
 /** Backend/mock is chosen once here; callers never branch on it. */
+export function googleLoginUrl(next?: string): string {
+  const safePath = safeNext(next);
+  if (USE_MOCK) {
+    return `/login?mock_google=1&next=${encodeURIComponent(safePath)}`;
+  }
+  return `${API_BASE}/auth/google?next=${encodeURIComponent(safePath)}`;
+}
+
 export const api: ApiClient = USE_MOCK ? mockApi : realApi;
 
 /** ICS feed URL for the given favorite article ids (max 100). */
