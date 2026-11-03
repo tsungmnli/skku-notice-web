@@ -26,8 +26,7 @@ export function SignupClient() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [termsAgreed, setTermsAgreed] = useState(false);
-  const [policyAgreed, setPolicyAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +82,7 @@ export function SignupClient() {
       setError("이름은 100자 이하로 입력해 주세요.");
       return;
     }
-    if (!termsAgreed || !policyAgreed) {
+    if (!agreed) {
       setError("이용약관과 개인정보처리방침에 동의해 주세요.");
       return;
     }
@@ -140,7 +139,7 @@ export function SignupClient() {
   };
 
   const handleGoogleLogin = () => {
-    if (!termsAgreed || !policyAgreed) return;
+    if (!agreed) return;
     setGoogleLoading(true);
     window.location.assign(api.googleLoginUrl());
   };
@@ -246,17 +245,8 @@ export function SignupClient() {
                       className={classes.legalLink}
                     >
                       이용약관
-                    </a>
-                    에 동의합니다.
-                  </Text>
-                }
-                checked={termsAgreed}
-                onChange={(event) => setTermsAgreed(event.currentTarget.checked)}
-                disabled={loading}
-              />
-              <Checkbox
-                label={
-                  <Text size="sm" className={classes.legal}>
+                    </a>{" "}
+                    및{" "}
                     <a
                       href="/policy"
                       target="_blank"
@@ -265,11 +255,11 @@ export function SignupClient() {
                     >
                       개인정보처리방침
                     </a>
-                    에 동의합니다.
+                    에 동의합니다(필수)
                   </Text>
                 }
-                checked={policyAgreed}
-                onChange={(event) => setPolicyAgreed(event.currentTarget.checked)}
+                checked={agreed}
+                onChange={(event) => setAgreed(event.currentTarget.checked)}
                 disabled={loading}
               />
             </Stack>
@@ -281,8 +271,7 @@ export function SignupClient() {
               disabled={
                 turnstileUnavailable ||
                 !turnstileToken ||
-                !termsAgreed ||
-                !policyAgreed
+                !agreed
               }
               className={classes.fullButton}
             >
@@ -306,7 +295,7 @@ export function SignupClient() {
         <GoogleButton
           onClick={handleGoogleLogin}
           loading={googleLoading}
-          disabled={!termsAgreed || !policyAgreed}
+          disabled={!agreed}
         />
       </Stack>
     </AuthLayout>

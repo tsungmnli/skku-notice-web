@@ -1,0 +1,1 @@
+export { LegalDocumentView } from "./LegalDocument";

@@ -12,6 +12,12 @@
 @media (max-width: 35.99em) {
   .footer {
     margin-top: var(--sp-6);
-    padding-bottom: calc(var(--bottom-nav-h) + var(--sp-4));
+    padding-bottom: calc(var(--bottom-nav-h) + var(--sp-5));
   }
+}
+
+.links {
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--sp-1);
 }
