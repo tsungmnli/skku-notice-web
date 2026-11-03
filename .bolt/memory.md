@@ -5,52 +5,54 @@
 - Next.js 기반의 날짜별 공지·안내 서비스
 - 모바일 우선 캘린더 UX: 날짜를 선택하면 해당 날짜의 공지 목록을 캘린더 아래에서 확인
 - 공지 즐겨찾기/북마크와 닫기 기능 제공
-- 인증 기능은 API 모드와 브라우저 mock 모드를 모두 지원하도록 기반을 마련하는 중
-- 현재 인증 화면이나 인증 라우트는 아직 추가하지 않음
+- 인증 기능은 API 모드와 브라우저 mock 모드를 모두 지원
+- 인증 화면 및 라우트가 추가되었으며, 가입·이메일 인증·비밀번호 재설정 흐름을 mock에서도 연결하는 단계
 
 ## Brand personality & voice
 
 - 한국어 UI와 사용자 안내 문구
 - 짧고 직접적인 작업 중심의 문체
-- mock 메일 안내와 오류 메시지도 핵심 행동과 이동 경로가 분명해야 함
+- 인증 안내와 오류 메시지는 핵심 행동과 이동 경로를 분명히 표시
+- 비밀번호 재설정 관련 서버 `detail` 문구는 성공 시 변형하지 않고 그대로 노출
 
 ## Visual design & UX direction
 
-- 모바일 캘린더 상세는 bottom sheet/drawer가 아닌 캘린더 카드 바로 아래의 inline 패널 사용
+- 모바일 캘린더 상세는 bottom sheet/drawer가 아닌 캘린더 카드 바로 아래 inline 패널 사용
 - 선택 날짜 공지 목록은 자연스러운 문서 흐름으로 확장
-- 캘린더와 공지 맥락을 동시에 유지하고, 불필요한 모달 인터럽트는 피함
-- 인증 화면은 아직 설계·구현하지 않았으므로 기존 제품 UI 방향에 맞춰 추후 연결
-- mock 메일 이벤트는 전역 Mantine 알림으로 노출하고, 링크 클릭 시 안내된 내부 경로로 이동
+- 불필요한 모달 인터럽트보다 현재 맥락을 유지하는 inline 안내와 전역 알림 선호
+- 인증 화면은 기존 제품 UI 방향에 맞춘 `AuthLayout` 및 공통 CSS 패턴 사용
+- 비밀번호 입력에는 표시/숨김 토글 제공
+- 재전송 대기 시간과 429 `Retry-After`는 사용자가 남은 시간을 알 수 있는 카운트다운으로 표시
+- 인증 관련 페이지는 검색 색인 제외; reset-password 페이지는 `referrer: no-referrer`
 
 ## Decisions, constraints & rationale
 
-- 인증 API 계약과 mock 인증 기반만 1단계로 구현하고, 인증 화면·라우트는 범위 밖으로 유지
-- `useAuth()`는 `status`, `user`, `signIn`, `signOut`, `refresh`를 모두 제공
-- `AuthProvider`는 Mantine `Notifications`가 마운트된 `ModalsProvider` 내부에 배치됨
-- API 선택은 기존 `client.ts`의 단일 진입점을 유지
-- `mock_google` 분기는 `googleLoginUrl()` 한 곳에만 존재
-  - mock: 안전한 `next`를 포함한 `/login?mock_google=1&next=...`
-  - 실제 API: `API_BASE/auth/google?next=<안전한 next 값>`
-- mock 인증 데이터는 `skku-mock-auth` localStorage 저장소에 계정·세션·인증 토큰·비밀번호 재설정 토큰을 함께 보관
-- mock에서는 실제 보안 해시를 흉내 내지 않고 평문 비밀번호를 사용
-- mock 메일은 저장 데이터가 아니라 모듈 간 이벤트 계약으로 전달하며, `AuthProvider`가 받아 Mantine 알림과 링크 이동을 담당
-- `AuthProvider`는 앱 시작 시 인증 상태를 확인하고 전역 Providers에 연결
-- API 인증 요청은 `credentials: "include"`를 사용하며, 인증 계약상 불필요한 `Authorization`·`X-Client` 헤더는 보내지 않음
-- 204 응답은 `void`로 처리하고, 네트워크 오류·인증 오류·rate limit·captcha 실패를 API 계층에서 구분
-- `safeNext` 유틸로 외부 또는 안전하지 않은 redirect를 차단하고 내부 경로만 허용
-- Turnstile 사이트 키는 환경 설정에 따라 결정하며 Docker build ARG/ENV 연결을 지원
-- mock 모듈은 동적 import로 운영 코드와 별도 번들이 되도록 구성되어 있으나, 확인 시점에 `.next` 산출물이 없어 실제 청크 분리는 검증하지 못함
-- 현재 mock의 429 처리는 로그인 실패와 메일 요청에 한정됨
-- verify-email, reset-password(IP 기준 시간당 30회), DELETE `/me`(비밀번호 5회 실패)의 별도 mock rate limit은 아직 구현되지 않음
-- 타입 검사와 lint/build가 품질 게이트이며, 제거된 UI나 legacy 참조를 남기지 않음
-- 현재 단계의 mock 가입·로그인 흐름은 화면이 연결된 다음 단계에서 실제로 확인 가능
+- 3단계에서 `/forgot-password`와 `/reset-password` 페이지 및 라우트를 추가
+- `/login`에서 forgot-password로 이동할 때 이메일을 URL 쿼리에 포함하지 않으며, 입력칸은 빈 상태로 시작
+- `/forgot-password`
+  - 이메일 하나로 `forgot-password` 호출
+  - 성공 시 서버 `detail`만 표시해 계정 존재 여부를 노출하지 않음
+  - 안내에 링크 1시간 유효, 재설정 후 모든 기기 로그아웃, Google 가입자도 비밀번호 설정 가능하다는 내용을 포함
+  - 안내 상태에서 재전송은 60초 쿨다운
+  - 429는 `Retry-After` 기반 카운트다운, 422와 네트워크 오류를 별도 처리
+- `/reset-password?token=...`
+  - 토큰을 읽은 즉시 `router.replace`로 URL에서 제거하고 React state에만 보관
+  - 토큰을 localStorage 등 영구 저장소에 저장하지 않음
+  - 새 비밀번호는 8~128자이며 확인 입력과 표시 토글을 제공
+  - `reset-password({ token, password })` 호출
+  - 성공 시 서버 `detail`을 알림으로 표시하고 자동 로그인 없이 `/login`으로 이동
+  - `invalid_token`은 만료·이미 사용된 링크 안내와 `/forgot-password` 이동 버튼을 제공
+  - 토큰 없이 접근하면 `/forgot-password`로 안내
+  - 422·네트워크 오류에서는 토큰을 state에 유지해 같은 화면에서 재시도
+  - 성공 또는 `invalid_token` 처리 후 토큰 폐기
+- mock 흐름은 가입 → 이메일 인증 → forgot-password → 메일 알림 링크 → reset-password → login 순서로 연결
+- mock/API 인증 계층의 기존 계약과 `safeNext`, 전역 Mantine 알림 구조를 유지
+- 재전송 버튼은 form submit 이벤트 핸들러를 직접 재사용하지 않고, 공통 비동기 전송 로직과 별도 이벤트 핸들러로 분리
+- 변경 파일은 `components/page/ForgotPassword/ForgotPassword.tsx`, 해당 `index.ts`, `app/forgot-password/page.tsx`, `components/page/ResetPassword/ResetPassword.tsx`, 해당 `index.ts`, `app/reset-password/page.tsx`
+- 사용자 요청상 3단계에서 멈추며, 이후 작업은 별도 지시가 필요
 
 ## Open questions & assumptions
 
-- 인증 화면과 라우트의 정보 구조, 입력 검증 UI, 오류 표시 방식은 다음 단계에서 결정
-- 실제 API의 Google 로그인 URL 계약은 백엔드 사양을 기준으로 연결하며, 현재 분기 지점만 고정
-- mock 메일 알림의 구체적인 문구와 표시 시간은 인증 화면 연결 시 조정 가능
-- 데스크톱/태블릿 캘린더 상세 레이아웃은 아직 미정
-- inline 공지 패널의 전환 시간·easing은 아직 미정
-- 실제 production 번들에서 mock 청크 분리가 유지되는지는 `.next` 생성 후 재검증 필요
-- 이메일 인증·비밀번호 재설정·계정 삭제의 mock rate limit 추가 여부와 정책은 미정; 현재 단계에서는 추가하지 않음
+- 실제 API의 `detail`, 422 오류 형식, `Retry-After` 단위가 mock과 항상 동일한지는 백엔드 계약 확인 필요
+- 인증 페이지의 세부 스타일과 데스크톱 레이아웃은 기존 `AuthLayout` 확장 시 조정 가능
+- `/reset-password`의 토큰 제거는 클라이언트 라우팅 이후 새로고침 시 재시도 불가한 의도된 동작으로 간주
