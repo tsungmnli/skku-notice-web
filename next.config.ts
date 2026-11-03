@@ -5,8 +5,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
-  // Docker 이미지가 .next/standalone 만 복사해서 실행한다 (Dockerfile 참고)
   output: "standalone",
+  env: {
+    NEXT_PUBLIC_USE_MOCK: process.env.NEXT_PUBLIC_USE_MOCK ?? "false",
+  },
 };
 
 export default nextConfig;
