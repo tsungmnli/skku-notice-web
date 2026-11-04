@@ -57,6 +57,15 @@ export type ArticleQuery = {
   deadline_to?: string;
 };
 
+export type CalendarPrefs = {
+  hidden_categories: string[];
+  favorites_only: boolean;
+};
+
+export type UserPreferences = {
+  calendar: CalendarPrefs | null;
+};
+
 export type User = {
   id: string;
   email: string;
@@ -65,6 +74,7 @@ export type User = {
   has_password: boolean;
   google_linked: boolean;
   created_at: string;
+  preferences?: UserPreferences;
 };
 
 export type LoginResponse = {

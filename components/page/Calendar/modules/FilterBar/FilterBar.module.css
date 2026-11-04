@@ -1,0 +1,22 @@
+.bar {
+  padding: var(--sp-2) 0;
+  gap: var(--sp-2);
+}
+
+.favChip {
+  font-weight: 600;
+}
+
+.catGroup {
+  gap: 4px;
+}
+
+.catChip {
+  font-size: var(--fs-xs);
+}
+
+.toggleAll {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-weight: 500;
+}

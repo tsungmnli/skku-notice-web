@@ -10,6 +10,8 @@ import type {
   LoginResponse,
   RegisterBody,
   User,
+  CalendarPrefs,
+  UserPreferences,
 } from "./types";
 import { ApiError } from "./errors";
 import { safeNext } from "@/lib/auth/safeNext";
@@ -231,6 +233,15 @@ async function realDeleteMe(password?: string): Promise<void> {
   });
 }
 
+async function realUpdatePreferences(patch: {
+  calendar?: CalendarPrefs | null;
+}): Promise<UserPreferences> {
+  return authRequest<UserPreferences>("/me/preferences", {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
 // Lazy-load mock module only when needed (avoids importing mock data in real mode).
 // 조건은 lib/auth/config.ts 의 isMockMode 와 같은 규칙이지만, 일부러 process.env 를 직접 적는다:
 // Next 가 빌드 때 NEXT_PUBLIC_* 와 NODE_ENV 를 리터럴로 바꿔야 번들러가 production 에서 이 분기와
@@ -261,6 +272,9 @@ export type ApiClient = {
   resetPassword: (token: string, password: string) => Promise<Detail>;
   getMe: () => Promise<User>;
   deleteMe: (password?: string) => Promise<void>;
+  updatePreferences: (patch: {
+    calendar?: CalendarPrefs | null;
+  }) => Promise<UserPreferences>;
   googleLogin: () => Promise<LoginResponse>;
   googleLoginUrl: (next?: string) => string;
 };
@@ -280,6 +294,7 @@ const realApi: ApiClient = {
   resetPassword: realResetPassword,
   getMe: realGetMe,
   deleteMe: realDeleteMe,
+  updatePreferences: realUpdatePreferences,
   googleLogin: () => {
     throw new Error("googleLogin은 mock 모드에서만 사용합니다.");
   },
@@ -303,6 +318,8 @@ const mockApi: ApiClient = {
     (await mock()).mockResetPassword(token, password),
   getMe: async () => (await mock()).mockGetMe(),
   deleteMe: async (password) => (await mock()).mockDeleteMe(password),
+  updatePreferences: async (patch) =>
+    (await mock()).mockUpdatePreferences(patch),
   googleLogin: async () => (await mock()).mockGoogleLogin(),
   googleLoginUrl,
 };

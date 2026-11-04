@@ -4,6 +4,8 @@ import type {
   LoginResponse,
   RegisterBody,
   User,
+  CalendarPrefs,
+  UserPreferences,
 } from "../api/types";
 import { ApiError } from "../api/errors";
 import { MOCK_MAIL_EVENT } from "../auth/mockEvents";
@@ -25,7 +27,10 @@ const VERIFY_TOKEN_DURATION = 24 * 60 * 60 * 1000;
 const RESET_TOKEN_DURATION = 60 * 60 * 1000;
 const GOOGLE_REAUTH_WINDOW = 10 * 60 * 1000;
 
-type MockAccount = User & { password: string | null };
+type MockAccount = User & {
+  password: string | null;
+  calendarPrefs: CalendarPrefs | null;
+};
 
 type MockToken = {
   token: string;
@@ -143,6 +148,9 @@ function toUser(account: MockAccount): User {
     has_password: account.has_password,
     google_linked: account.google_linked,
     created_at: account.created_at,
+    preferences: {
+      calendar: account.calendarPrefs,
+    },
   };
 }
 
@@ -243,6 +251,7 @@ export async function mockRegister(body: RegisterBody): Promise<Detail> {
     google_linked: false,
     created_at: new Date().toISOString(),
     password: body.password,
+    calendarPrefs: null,
   };
   const token = addVerificationToken(state, account);
   state.accounts.push(account);
@@ -436,6 +445,18 @@ export async function mockDeleteMe(password?: string): Promise<void> {
   writeState(state);
 }
 
+export async function mockUpdatePreferences(patch: {
+  calendar?: CalendarPrefs | null;
+}): Promise<UserPreferences> {
+  const state = readState();
+  const account = findSessionAccount(state);
+  if (patch.calendar !== undefined) {
+    account.calendarPrefs = patch.calendar;
+  }
+  writeState(state);
+  return { calendar: account.calendarPrefs };
+}
+
 export async function mockGoogleLogin(): Promise<LoginResponse> {
   const state = readState();
   const email = "google@example.com";
@@ -450,6 +471,7 @@ export async function mockGoogleLogin(): Promise<LoginResponse> {
       google_linked: true,
       created_at: new Date().toISOString(),
       password: null,
+      calendarPrefs: null,
     };
     state.accounts.push(account);
   }

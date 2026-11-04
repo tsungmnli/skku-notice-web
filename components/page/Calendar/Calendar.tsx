@@ -1,253 +1,161 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Stack,
-  Group,
-  Text,
-  Button,
-  ActionIcon,
-  Switch,
-  Paper,
-  Center,
-  Alert,
-  Divider,
-  ScrollAreaAutosize,
-} from "@mantine/core";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconAlertCircle,
-  IconCalendarEvent,
-  IconX,
-} from "@tabler/icons-react";
+import { useCallback, useMemo, useRef } from "react";
+import { Stack, Group, Text, Button, Alert } from "@mantine/core";
+import { IconAlertCircle } from "@tabler/icons-react";
 import dayjs from "dayjs";
-import { ArticleCard } from "@/components/common/ArticleCard";
 import { useFavorites } from "@/hooks/useFavorites";
-import {
-  useMonthDeadlines,
-  groupByDate,
-  isToday,
-} from "./hooks/useMonthDeadlines";
-import { SEOUL_TZ, computeDDay } from "@/utils/date";
+import { useCalendarPrefs } from "./hooks/useCalendarPrefs";
+import { useCalendarArticles } from "./hooks/useCalendarArticles";
+import { FilterBar } from "./modules/FilterBar";
+import { MiniCalendar } from "./modules/MiniCalendar";
+import { AgendaView } from "./modules/AgendaView";
+import { CATEGORY_CODES } from "@/utils/constants";
+import { parseSeoul, SEOUL_TZ, todayInSeoul } from "@/utils/date";
 import classes from "./Calendar.module.css";
 
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-
 export function CalendarClient() {
-  const [currentMonth, setCurrentMonth] = useState(() =>
-    dayjs.tz(new Date(), SEOUL_TZ),
-  );
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [favOnly, setFavOnly] = useState(false);
+  const { prefs, hydrated, update, reset } = useCalendarPrefs();
+  const {
+    articles,
+    loading,
+    error,
+    window,
+    loadMore,
+    loadPast,
+    jumpToDate,
+    backToToday,
+    hasPast,
+  } = useCalendarArticles();
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
-  const gridRef = useRef<HTMLDivElement>(null);
-  const detailRef = useRef<HTMLDivElement>(null);
 
-  const { deadlines, loading, error } = useMonthDeadlines(currentMonth);
-  const deadlineMap = useMemo(() => groupByDate(deadlines), [deadlines]);
-  const favSet = useMemo(() => new Set(favorites), [favorites]);
+  const agendaRef = useRef<HTMLDivElement>(null);
 
-  const filteredDeadlineMap = useMemo(() => {
-    if (!favOnly) return deadlineMap;
-    const filtered = new Map<string, typeof deadlines>();
-    for (const [date, articles] of deadlineMap) {
-      const favArticles = articles.filter((a) => favSet.has(a.id));
-      if (favArticles.length > 0) filtered.set(date, favArticles);
-    }
-    return filtered;
-  }, [deadlineMap, favOnly, favSet]);
+  const todayStr = useMemo(() => todayInSeoul().format("YYYY-MM-DD"), []);
 
-  const calendarDays = useMemo(() => {
-    const startOfMonth = currentMonth.startOf("month");
-    const endOfMonth = currentMonth.endOf("month");
-    const startWeekday = startOfMonth.day();
-    const days: (dayjs.Dayjs | null)[] = [];
-    for (let i = 0; i < startWeekday; i++) days.push(null);
-    for (let d = 0; d < endOfMonth.date(); d++)
-      days.push(startOfMonth.add(d, "day"));
-    while (days.length % 7 !== 0) days.push(null);
-    return days;
-  }, [currentMonth]);
-
-  const selectedArticles = useMemo(() => {
-    if (!selectedDate) return [];
-    return filteredDeadlineMap.get(selectedDate) || [];
-  }, [selectedDate, filteredDeadlineMap]);
-
-  // 키보드 핸들러(useEffect)에서 쓰므로 반드시 그보다 먼저 선언해야 합니다.
-  const handleDayClick = useCallback(
-    (dateStr: string) =>
-      setSelectedDate((current) => (current === dateStr ? null : dateStr)),
-    [],
-  );
-
-  // Scroll detail into view on mobile when selecting a day
-  useEffect(() => {
-    if (selectedDate && detailRef.current && typeof window !== "undefined") {
-      const isMobile = window.matchMedia("(max-width: 47.99em)").matches;
-      if (isMobile) {
-        detailRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-        });
-      }
-    }
-  }, [selectedDate]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectedDate) {
-        setSelectedDate(null);
-        return;
-      }
-      if (!gridRef.current?.contains(document.activeElement)) return;
-      const activeEl = document.activeElement as HTMLElement;
-      const cells = Array.from(
-        gridRef.current.querySelectorAll<HTMLElement>("[data-date]"),
-      );
-      const idx = cells.indexOf(activeEl);
-      if (idx === -1) return;
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        const date = activeEl.dataset.date;
-        if (date) handleDayClick(date);
-        return;
-      }
-      let newIdx = idx;
-      if (e.key === "ArrowRight") newIdx = Math.min(idx + 1, cells.length - 1);
-      else if (e.key === "ArrowLeft") newIdx = Math.max(idx - 1, 0);
-      else if (e.key === "ArrowDown")
-        newIdx = Math.min(idx + 7, cells.length - 1);
-      else if (e.key === "ArrowUp") newIdx = Math.max(idx - 7, 0);
-      else return;
-      e.preventDefault();
-      cells[newIdx]?.focus();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [calendarDays, selectedDate, handleDayClick]);
-
-  const monthLabel = currentMonth.format("YYYY년 M월");
-  const goPrevMonth = () => setCurrentMonth((m) => m.subtract(1, "month"));
-  const goNextMonth = () => setCurrentMonth((m) => m.add(1, "month"));
-  const goToday = () => {
-    setCurrentMonth(dayjs.tz(new Date(), SEOUL_TZ));
-    setSelectedDate(null);
-  };
-
-  const renderDayCell = (day: dayjs.Dayjs, idx: number) => {
-    const dateStr = day.format("YYYY-MM-DD");
-    const articles = filteredDeadlineMap.get(dateStr) || [];
-    const count = articles.length;
-    const today = isToday(day);
-    const isWeekend = day.day() === 0 || day.day() === 6;
-    const isSelected = selectedDate === dateStr;
-
-    // Check for imminent deadlines (0-3 days)
-    const hasImminent = articles.some((a) => {
-      if (!a.deadline_at) return false;
-      const info = computeDDay(a.deadline_at);
-      return info && !info.passed && info.days <= 3;
+  // Filtered articles
+  const filteredArticles = useMemo(() => {
+    if (!hydrated) return [];
+    const hiddenSet = new Set(prefs.hidden_categories);
+    const favSet = new Set(favorites);
+    return articles.filter((a) => {
+      const cats = a.categories.length > 0 ? a.categories : ["general"];
+      const visible = cats.some((c) => !hiddenSet.has(c));
+      if (!visible) return false;
+      if (prefs.favorites_only && !favSet.has(a.id)) return false;
+      return true;
     });
-    const categoryDots = articles
-      .slice(0, 3)
-      .map((article) => article.categories[0] || "default");
+  }, [
+    articles,
+    prefs.hidden_categories,
+    prefs.favorites_only,
+    favorites,
+    hydrated,
+  ]);
 
-    return (
-      <button
-        key={idx}
-        className={classes.dayCell}
-        data-date={dateStr}
-        data-today={today || undefined}
-        data-selected={isSelected || undefined}
-        data-weekend={isWeekend || undefined}
-        data-has-deadline={count > 0 || undefined}
-        data-imminent={hasImminent || undefined}
-        onClick={() => handleDayClick(dateStr)}
-        aria-label={`${dateStr}${count > 0 ? `, 마감 ${count}건` : ", 마감 공지 없음"}`}
-        aria-pressed={isSelected}
-      >
-        <span className={classes.dayNumber}>{day.date()}</span>
-        {count > 0 && (
-          <div className={classes.dayContent}>
-            {/* Desktop: show up to 2 title previews */}
-            <div className={classes.titlesPreview}>
-              {articles.slice(0, 3).map((a) => (
-                <span
-                  key={a.id}
-                  className={classes.titlePreview}
-                  title={a.title}
-                >
-                  <span className={classes.categoryDot} />
-                  {a.title}
-                </span>
-              ))}
-              {count > 3 && (
-                <span className={classes.moreCount}>+{count - 3}개 더보기</span>
-              )}
-            </div>
-            <span className={classes.dotContainer} aria-hidden="true">
-              {categoryDots.map((category, dotIndex) => (
-                <span key={`${category}-${dotIndex}`} className={classes.dot} />
-              ))}
-              {count > 3 && (
-                <span className={classes.dotCount}>+{count - 3}</span>
-              )}
-            </span>
-          </div>
-        )}
-      </button>
-    );
-  };
+  // Category counts in current window (before filtering)
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const a of articles) {
+      const cats = a.categories.length > 0 ? a.categories : ["general"];
+      for (const c of cats) {
+        counts[c] = (counts[c] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [articles]);
 
-  const detailPanel = (
-    <Stack gap={0} className={classes.detailPanel}>
-      <Group
-        justify="space-between"
-        align="center"
-        className={classes.detailHeader}
-      >
-        <Text fw={600} size="sm">
-          {selectedDate
-            ? `${dayjs(selectedDate, "YYYY-MM-DD").format("M월 D일")} 마감 공지`
-            : "날짜를 선택하세요"}
-        </Text>
-        {selectedDate && (
-          <ActionIcon
-            variant="subtle"
-            onClick={() => setSelectedDate(null)}
-            aria-label="닫기"
-          >
-            <IconX size={16} />
-          </ActionIcon>
-        )}
-      </Group>
-      <Divider />
-      <ScrollAreaAutosize mah="60vh">
-        {selectedArticles.length > 0 ? (
-          <Stack gap={0}>
-            {selectedArticles.map((article) => (
-              <ArticleCard
-                key={article.id}
-                article={article}
-                isFavorite={isFavorite(article.id)}
-                onToggleFavorite={toggleFavorite}
-              />
-            ))}
-          </Stack>
-        ) : (
-          <Center p={20}>
-            <Text size="sm" c="dimmed">
-              {selectedDate
-                ? "이 날의 마감 공지가 없습니다"
-                : "마감일이 있는 날짜를 클릭하면 공지가 표시됩니다"}
-            </Text>
-          </Center>
-        )}
-      </ScrollAreaAutosize>
-    </Stack>
+  const favoritesCount = useMemo(() => {
+    const favSet = new Set(favorites);
+    return articles.filter((a) => favSet.has(a.id)).length;
+  }, [articles, favorites]);
+
+  // Day metadata for mini calendar (from filtered articles)
+  const dayMetaMap = useMemo(() => {
+    const map = new Map<
+      string,
+      { dateStr: string; count: number; categories: string[] }
+    >();
+    for (const a of filteredArticles) {
+      if (!a.deadline_at) continue;
+      const dateStr = parseSeoul(a.deadline_at).format("YYYY-MM-DD");
+      const existing = map.get(dateStr);
+      const cats = a.categories.length > 0 ? a.categories : ["general"];
+      if (existing) {
+        existing.count++;
+        for (const c of cats) {
+          if (!existing.categories.includes(c)) existing.categories.push(c);
+        }
+      } else {
+        map.set(dateStr, { dateStr, count: 1, categories: [...cats] });
+      }
+    }
+    return map;
+  }, [filteredArticles]);
+
+  const allFilteredOut =
+    hydrated &&
+    !loading &&
+    articles.length > 0 &&
+    filteredArticles.length === 0;
+
+  // Handlers
+  const handleToggleCategory = useCallback(
+    (code: string) => {
+      const hidden = prefs.hidden_categories;
+      const next = hidden.includes(code)
+        ? hidden.filter((c) => c !== code)
+        : [...hidden, code];
+      update({ hidden_categories: next });
+    },
+    [prefs.hidden_categories, update],
   );
+
+  const handleToggleFavoritesOnly = useCallback(() => {
+    update({ favorites_only: !prefs.favorites_only });
+  }, [prefs.favorites_only, update]);
+
+  const handleAllOn = useCallback(() => {
+    update({ hidden_categories: [] });
+  }, [update]);
+
+  const handleAllOff = useCallback(() => {
+    update({ hidden_categories: [...CATEGORY_CODES] });
+  }, [update]);
+
+  const handleDayClick = useCallback(
+    (dateStr: string) => {
+      // If date is outside loaded window, jump to it
+      const date = dayjs.tz(dateStr, SEOUL_TZ);
+      const inWindow =
+        date.isAfter(window.from.subtract(1, "day")) &&
+        date.isBefore(window.to.add(1, "day"));
+      if (!inWindow) {
+        jumpToDate(date);
+        return;
+      }
+      // Scroll to the day section, or the next day that has items
+      const sortedDates = [...dayMetaMap.keys()].sort();
+      const target = sortedDates.find((d) => d >= dateStr);
+      if (target) {
+        const el = document.getElementById(`day-${target}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    },
+    [dayMetaMap, jumpToDate, window.from, window.to],
+  );
+
+  if (error) {
+    return (
+      <div className={classes.pageContainer}>
+        <Alert icon={<IconAlertCircle size={16} />} color="red" variant="light">
+          {error}
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className={classes.pageContainer}>
@@ -256,106 +164,65 @@ export function CalendarClient() {
         <Group
           justify="space-between"
           align="center"
-          className={classes.header}
+          className={classes.topBar}
         >
-          <Group gap="xs">
-            <ActionIcon
-              variant="subtle"
-              onClick={goPrevMonth}
-              aria-label="이전 달"
-              className={classes.monthBtn}
-            >
-              <IconChevronLeft size={20} />
-            </ActionIcon>
-            <Text fw={700} size="lg" className={classes.monthLabel}>
-              {monthLabel}
+          <div>
+            <Text fw={700} size="lg">
+              마감 캘린더
             </Text>
-            <ActionIcon
-              variant="subtle"
-              onClick={goNextMonth}
-              aria-label="다음 달"
-              className={classes.monthBtn}
-            >
-              <IconChevronRight size={20} />
-            </ActionIcon>
-          </Group>
-          <Group gap="sm">
-            <Switch
-              size="xs"
-              label="즐겨찾기만"
-              checked={favOnly}
-              onChange={(e) => setFavOnly(e.currentTarget.checked)}
-              color="skku-green"
-              disabled={favorites.length === 0}
-            />
-            <Button variant="subtle" size="xs" onClick={goToday}>
-              오늘
+            <Text size="xs" c="dimmed">
+              {window.from.format("YYYY.MM.DD")} ~{" "}
+              {window.to.format("YYYY.MM.DD")}
+            </Text>
+          </div>
+          {hasPast && (
+            <Button variant="subtle" size="sm" onClick={backToToday}>
+              오늘로 돌아가기
             </Button>
-          </Group>
+          )}
         </Group>
 
-        {error && (
-          <Alert
-            icon={<IconAlertCircle size={16} />}
-            color="red"
-            variant="light"
-          >
-            {error}
-          </Alert>
+        {/* Filter bar */}
+        {hydrated && (
+          <FilterBar
+            favoritesOnly={prefs.favorites_only}
+            hiddenCategories={prefs.hidden_categories}
+            counts={categoryCounts}
+            favoritesCount={favoritesCount}
+            onToggleFavoritesOnly={handleToggleFavoritesOnly}
+            onToggleCategory={handleToggleCategory}
+            onAllOn={handleAllOn}
+            onAllOff={handleAllOff}
+          />
         )}
 
-        {/* Desktop: 2-column layout */}
-        <div className={classes.desktopLayout}>
-          <Paper withBorder radius="md" className={classes.calendarPaper} p={0}>
-            <div className={classes.weekdayRow}>
-              {WEEKDAYS.map((day, i) => (
-                <div
-                  key={day}
-                  className={classes.weekdayCell}
-                  data-weekend={i === 0 || i === 6}
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-            <div className={classes.dayGrid} ref={gridRef}>
-              {calendarDays.map((day, i) =>
-                day ? (
-                  renderDayCell(day, i)
-                ) : (
-                  <div key={i} className={classes.emptyCell} />
-                ),
-              )}
-            </div>
-          </Paper>
+        {/* Main layout: agenda + side panel */}
+        <div className={classes.layout}>
+          <div className={classes.agendaCol}>
+            <AgendaView
+              ref={agendaRef}
+              articles={filteredArticles}
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              loading={loading}
+              error={null}
+              hasPast={hasPast}
+              onLoadPast={loadPast}
+              onLoadMore={loadMore}
+              onResetFilters={reset}
+              allFilteredOut={allFilteredOut}
+              todayStr={todayStr}
+            />
+          </div>
 
-          {/* Desktop detail panel (right) */}
-          {selectedDate && (
-            <div className={classes.detailDesktop} ref={detailRef}>
-              {detailPanel}
-            </div>
-          )}
+          <aside className={classes.sideCol}>
+            <MiniCalendar
+              dayMetaMap={dayMetaMap}
+              onDayClick={handleDayClick}
+              activeDateStr={null}
+            />
+          </aside>
         </div>
-
-        {loading && (
-          <Text size="xs" c="dimmed" ta="center">
-            마감일을 불러오는 중...
-          </Text>
-        )}
-
-        {!loading && deadlines.length === 0 && !error && (
-          <Center p={20}>
-            <Stack align="center" gap="sm">
-              <IconCalendarEvent
-                size={36}
-                color="var(--mantine-color-gray-4)"
-              />
-              <Text size="sm" c="dimmed">
-                이 달에 마감일이 있는 공지가 없습니다
-              </Text>
-            </Stack>
-          </Center>
-        )}
       </Stack>
     </div>
   );
