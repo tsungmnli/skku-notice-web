@@ -223,5 +223,6 @@ export {
   mockRegister,
   mockResendVerification,
   mockResetPassword,
+  mockUpdatePreferences,
   mockVerifyEmail,
 } from "./auth";
