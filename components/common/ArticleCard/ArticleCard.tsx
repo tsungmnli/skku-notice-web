@@ -7,12 +7,15 @@ import {
   IconEye,
   IconExternalLink,
   IconTrash,
+  IconPaperclip,
 } from "@tabler/icons-react";
 import type { Article } from "@/lib/api/types";
 import { formatPostedOn, formatDeadline, formatEventAt } from "@/utils/date";
 import { categoryLabel } from "@/utils/constants";
 import { DeadlineBadge } from "../DeadlineBadge";
 import classes from "./ArticleCard.module.css";
+
+type Badge = "NEW" | "UPDATED" | null;
 
 type Props = {
   article: Article;
@@ -22,6 +25,9 @@ type Props = {
   showRemove?: boolean;
   onRemove?: (id: number) => void;
   showDateUnknown?: boolean;
+  badge?: Badge;
+  onOpen?: (id: number) => void;
+  origin?: string | null;
 };
 
 export function ArticleCard({
@@ -32,6 +38,9 @@ export function ArticleCard({
   showRemove,
   onRemove,
   showDateUnknown = false,
+  badge = null,
+  onOpen,
+  origin = null,
 }: Props) {
   return (
     <article
@@ -77,8 +86,17 @@ export function ArticleCard({
         rel="noopener noreferrer"
         className={classes.titleLink}
         aria-label={`${article.title} (새 탭에서 열기)`}
+        onClick={() => onOpen?.(article.id)}
+        onAuxClick={(e) => {
+          if (e.button === 1) onOpen?.(article.id);
+        }}
       >
         <div className={classes.content}>
+          {origin && (
+            <Text size="xs" c="dimmed" className={classes.origin}>
+              {origin}
+            </Text>
+          )}
           <div className={classes.titleRow}>
             {article.is_pinned && (
               <IconPin
@@ -87,10 +105,28 @@ export function ArticleCard({
                 aria-label="고정 공지"
               />
             )}
+            {badge && (
+              <Badge
+                size="xs"
+                variant={badge === "NEW" ? "filled" : "light"}
+                color={badge === "NEW" ? "skku-green" : "yellow"}
+                radius="sm"
+                className={classes.freshBadge}
+              >
+                {badge}
+              </Badge>
+            )}
             <Text size="sm" fw={600} className={classes.title} lineClamp={2}>
               {article.title}
             </Text>
             <IconExternalLink size={14} className={classes.externalIcon} />
+            {article.has_attachment && (
+              <IconPaperclip
+                size={14}
+                className={classes.attachmentIcon}
+                aria-label="첨부 있음"
+              />
+            )}
           </div>
 
           {(article.deadline_at || article.event_at) && (
@@ -104,7 +140,10 @@ export function ArticleCard({
                 >
                   <DeadlineBadge deadlineAt={article.deadline_at} size="sm" />
                   <Text size="xs" c="dimmed" className={classes.deadlineDate}>
-                    {formatDeadline(article.deadline_at)}
+                    {formatDeadline(
+                      article.deadline_at,
+                      article.deadline_has_time,
+                    )}
                   </Text>
                   {article.deadline_source === "body" && (
                     <Text size="xs" c="dimmed" className={classes.sourceNote}>
@@ -129,7 +168,7 @@ export function ArticleCard({
                     행사
                   </Badge>
                   <Text size="xs" c="dimmed" className={classes.eventDate}>
-                    {formatEventAt(article.event_at)}
+                    {formatEventAt(article.event_at, article.event_has_time)}
                   </Text>
                 </Group>
               )}
@@ -152,20 +191,23 @@ export function ArticleCard({
             <Text size="xs" c="dimmed" className={classes.date}>
               {formatPostedOn(article.posted_on)}
             </Text>
-            {article.categories.length > 0 && (
+            {article.categories.filter((c) => c !== "general").length > 0 && (
               <Group gap={4} wrap="wrap" className={classes.categories}>
-                {article.categories.slice(0, 3).map((code) => (
-                  <Badge
-                    key={code}
-                    size="xs"
-                    variant="light"
-                    color="gray"
-                    radius="sm"
-                    className={classes.catBadge}
-                  >
-                    {categoryLabel(code)}
-                  </Badge>
-                ))}
+                {article.categories
+                  .filter((c) => c !== "general")
+                  .slice(0, 3)
+                  .map((code) => (
+                    <Badge
+                      key={code}
+                      size="xs"
+                      variant="light"
+                      color="gray"
+                      radius="sm"
+                      className={classes.catBadge}
+                    >
+                      {categoryLabel(code)}
+                    </Badge>
+                  ))}
               </Group>
             )}
             {article.view_count !== null && (

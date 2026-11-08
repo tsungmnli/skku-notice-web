@@ -77,21 +77,28 @@ export function formatPostedOn(dateStr: string): string {
   return dayjs(dateStr, "YYYY-MM-DD").format("YYYY.MM.DD");
 }
 
-export function formatDeadline(deadlineAt: string | null): string {
+export function formatDeadline(
+  deadlineAt: string | null,
+  hasTime?: boolean,
+): string {
   if (!deadlineAt) return "";
   const dl = parseSeoul(deadlineAt);
-  if (isTimeUnknown(deadlineAt, dl)) {
+  if (hasTime === false || isTimeUnknown(deadlineAt, dl)) {
     return dl.format("YYYY.MM.DD");
   }
   return dl.format("YYYY.MM.DD HH:mm");
 }
 
-export function formatEventAt(eventAt: string | null): string {
+export function formatEventAt(
+  eventAt: string | null,
+  hasTime?: boolean,
+): string {
   if (!eventAt) return "";
   const ev = parseSeoul(eventAt);
-  return ev.format(
-    isTimeUnknown(eventAt, ev) ? "YYYY.MM.DD" : "YYYY.MM.DD HH:mm",
-  );
+  if (hasTime === false || isTimeUnknown(eventAt, ev)) {
+    return ev.format("YYYY.MM.DD");
+  }
+  return ev.format("YYYY.MM.DD HH:mm");
 }
 
 export function todayInSeoul(): dayjs.Dayjs {

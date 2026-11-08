@@ -412,6 +412,19 @@ export async function mockGetMe(): Promise<User> {
   return toUser(findSessionAccount(state));
 }
 
+export function mockCurrentUserId(): string | null {
+  const state = readState();
+  const session = state.session;
+  if (!session || new Date(session.expiresAt).getTime() <= now()) {
+    return null;
+  }
+  const account = state.accounts.find(({ id }) => id === session.userId);
+  if (!account) {
+    return null;
+  }
+  return session.userId;
+}
+
 export async function mockDeleteMe(password?: string): Promise<void> {
   const state = readState();
   const account = findSessionAccount(state);

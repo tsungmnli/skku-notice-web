@@ -8,6 +8,7 @@ import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { BottomTabs } from "@/components/common/BottomTabs";
 import { AuthProvider } from "@/components/common/AuthProvider";
+import { ReadsSync } from "@/components/common/ReadsSync";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ModalsProvider>
         <Notifications position="top-center" />
         <AuthProvider>
+          <ReadsSync />
           <Header />
           <main>{children}</main>
           <Footer />

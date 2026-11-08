@@ -1,0 +1,335 @@
+.pageContainer {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--sp-4) var(--container-px);
+}
+
+.emptyState {
+  min-height: 320px;
+}
+
+/* === Control area === */
+.controlArea {
+  margin: 0 calc(-1 * var(--container-px));
+}
+
+/* Sticky bar: title + tabs */
+.stickyBar {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 40;
+  background: var(--app-bg);
+  padding: var(--sp-1) var(--container-px) var(--sp-2);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.titleRow {
+  min-height: 24px;
+  margin-bottom: var(--sp-1);
+}
+
+.editLink {
+  flex-shrink: 0;
+  font-size: var(--fs-caption);
+}
+
+/* === Tab row — PRIMARY navigation, strongest visual weight === */
+.tabsScrollWrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.tabsRow {
+  display: flex;
+  gap: var(--sp-1);
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+  scroll-behavior: smooth;
+}
+
+.tabsRow::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 160px;
+  overflow: hidden;
+  min-height: 36px;
+}
+
+.tab:hover {
+  background: var(--surface-hover);
+  border-color: var(--surface-border-strong);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--skku-green-5);
+  outline-offset: 1px;
+}
+
+/* Active tab: filled, bold — unmistakable */
+.tab[data-active] {
+  background: var(--skku-green-6);
+  border-color: var(--skku-green-6);
+  color: var(--mantine-color-white);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.tab[data-active]:hover {
+  background: var(--skku-green-7);
+  border-color: var(--skku-green-7);
+}
+
+/* Dark theme: use a lighter green for contrast */
+:where([data-mantine-color-scheme="dark"]) .tab[data-active] {
+  background: var(--skku-green-5);
+  border-color: var(--skku-green-5);
+  color: var(--mantine-color-dark-9);
+}
+
+:where([data-mantine-color-scheme="dark"]) .tab[data-active]:hover {
+  background: var(--skku-green-4);
+}
+
+/* Badges on tabs — readable on filled active tab */
+.tabLabel {
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabBadges {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tabBadge {
+  pointer-events: none;
+  background: var(--mantine-color-white);
+  color: var(--skku-green-7);
+}
+
+:where([data-mantine-color-scheme="dark"]) .tabBadge {
+  background: var(--mantine-color-dark-9);
+  color: var(--skku-green-4);
+}
+
+.tabDeadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  color: var(--mantine-color-orange-6);
+}
+
+.tab[data-active] .tabDeadline {
+  color: var(--mantine-color-orange-3);
+}
+
+/* Edge fade indicators */
+.tabsFadeLeft,
+.tabsFadeRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.tabsFadeLeft {
+  left: 0;
+  background: linear-gradient(to right, var(--app-bg), transparent);
+}
+
+.tabsFadeRight {
+  right: 0;
+  background: linear-gradient(to left, var(--app-bg), transparent);
+}
+
+/* Fallback: subtle right fade */
+.tabsFadeRight,
+.originScrollWrapper .tabsFadeRight {
+  opacity: 0.5;
+}
+
+/* === Below sticky: focal summary + origin chips === */
+.belowSticky {
+  padding: var(--sp-2) var(--container-px) var(--sp-2);
+  gap: var(--sp-2);
+}
+
+/* Focal summary block — distinct, compact, carries info the tab doesn't */
+.summaryBlock {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.summaryTopLine {
+  min-height: 18px;
+}
+
+.summaryEmpty {
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+.summaryCounts {
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+/* Prominent count pills when > 0 */
+.summaryCountNew {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--skku-green-7);
+  white-space: nowrap;
+}
+
+:where([data-mantine-color-scheme="dark"]) .summaryCountNew {
+  color: var(--skku-green-3);
+}
+
+.summaryCountDeadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--mantine-color-orange-6);
+  white-space: nowrap;
+}
+
+:where([data-mantine-color-scheme="dark"]) .summaryCountDeadline {
+  color: var(--mantine-color-orange-4);
+}
+
+.boardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 150ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.boardLink:hover {
+  color: var(--accent-green);
+}
+
+.boardLink:focus-visible {
+  outline: 2px solid var(--skku-green-5);
+  outline-offset: 1px;
+  border-radius: var(--radius-sm);
+}
+
+/* === Origin/source chips — SUBORDINATE to tabs, quieter style === */
+.originScrollWrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.originChips {
+  display: flex;
+  gap: var(--sp-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+}
+
+.originChips::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ghost/text-link style — clearly different from filled tabs */
+.originChip {
+  padding: 2px var(--sp-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--text-muted);
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.originChip:hover {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+}
+
+.originChip:focus-visible {
+  outline: 2px solid var(--skku-green-5);
+  outline-offset: 1px;
+}
+
+.originChip[data-active] {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* === Mobile adjustments === */
+@media (max-width: 35.99em) {
+  .stickyBar {
+    padding-top: var(--sp-1);
+  }
+
+  .tab {
+    max-width: 120px;
+    min-height: 40px;
+  }
+
+  .summaryCountNew,
+  .summaryCountDeadline {
+    font-size: var(--fs-sm);
+  }
+}

@@ -1,10 +1,16 @@
 import dayjs from "dayjs";
 import { computeDDay, parseSeoul, SEOUL_TZ } from "../../utils/date";
-import { mockArticles, mockCategoryList, mockWriterList } from "./data";
+import {
+  mockArticles,
+  mockCategoryList,
+  mockWriterList,
+  sourcesForScope,
+} from "./data";
 import type {
   Article,
   ArticleListResponse,
   ArticleQuery,
+  ArticleScope,
   Category,
   LookupResponse,
   Writer,
@@ -70,6 +76,12 @@ function matchesDeadlineRange(
   return true;
 }
 
+function matchesScope(article: Article, query: ArticleQuery): boolean {
+  const slugs = sourcesForScope(query);
+  if (slugs === null) return article.source === "skku";
+  return slugs.includes(article.source);
+}
+
 function sortArticles(items: Article[], sort?: string): Article[] {
   const sorted = [...items];
   switch (sort) {
@@ -115,6 +127,7 @@ export async function mockListArticles(
 
   let items = mockArticles.filter((a) => {
     return (
+      matchesScope(a, query) &&
       matchesQuery(a, query.q) &&
       matchesCategories(a, query.category) &&
       matchesWriters(a, query.writer) &&
@@ -182,17 +195,20 @@ export async function mockLookupArticles(
   return { items, missing_ids: missingIds };
 }
 
-export async function mockListCategories(): Promise<Category[]> {
+export async function mockListCategories(
+  scope?: ArticleScope,
+): Promise<Category[]> {
   await delay(150);
-  return mockCategoryList();
+  return mockCategoryList(scope);
 }
 
 export async function mockListWriters(
   q?: string,
   limit?: number,
+  scope?: ArticleScope,
 ): Promise<Writer[]> {
   await delay(150);
-  return mockWriterList(q, limit);
+  return mockWriterList(q, limit, scope);
 }
 
 export async function mockCalendarDeadlines(
@@ -226,3 +242,9 @@ export {
   mockUpdatePreferences,
   mockVerifyEmail,
 } from "./auth";
+export {
+  mockListDepartments,
+  mockGetStatus,
+  mockListReads,
+  mockMarkReads,
+} from "./departments";

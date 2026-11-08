@@ -2,9 +2,15 @@ import type {
   Article,
   ArticleListResponse,
   ArticleQuery,
+  ArticleScope,
   Category,
   LookupResponse,
   Writer,
+  Department,
+  Status,
+  ReadItem,
+  ReadsResponse,
+  ReadsSaved,
   Detail,
   LoginBody,
   LoginResponse,
@@ -15,7 +21,6 @@ import type {
 } from "./types";
 import { ApiError } from "./errors";
 import { safeNext } from "@/lib/auth/safeNext";
-import { isMockMode } from "@/lib/auth/config";
 
 export { ApiError } from "./errors";
 
@@ -24,10 +29,16 @@ const ENV_API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 /** Single source of truth for the backend base URL. */
 export const API_BASE = ENV_API_BASE || "http://localhost:8000/api/v1";
 
-// Mock is opt-in. The rule lives in lib/auth/config.ts (single source of truth):
-// falling back to mock when API_BASE is missing is a dev-only convenience, so a
-// forgotten env var in production fails loudly instead of silently serving fake data.
-const USE_MOCK = isMockMode;
+// Mock is opt-in. Same rule as isMockMode in lib/auth/config.ts, but written with
+// literal process.env reads on purpose: Next replaces NEXT_PUBLIC_* / NODE_ENV at
+// build time, so the bundler can fold this to `false` in production and drop
+// mockApi (and the "skku-mock-*" strings inside it). Importing isMockMode from
+// another module defeats that folding. Falling back to mock when API_BASE is
+// missing is a dev-only convenience, so a forgotten env var in production fails
+// loudly instead of silently serving fake data.
+const USE_MOCK =
+  process.env.NEXT_PUBLIC_USE_MOCK === "true" ||
+  (!process.env.NEXT_PUBLIC_API_BASE && process.env.NODE_ENV !== "production");
 
 function buildQuery(
   params: ArticleQuery,
@@ -36,6 +47,9 @@ function buildQuery(
   if (params.q) q.q = params.q;
   if (params.category && params.category.length) q.category = params.category;
   if (params.writer && params.writer.length) q.writer = params.writer;
+  if (params.department && params.department.length)
+    q.department = params.department;
+  if (params.source && params.source.length) q.source = params.source;
   if (params.date_from) q.date_from = params.date_from;
   if (params.date_to) q.date_to = params.date_to;
   if (params.pinned) q.pinned = params.pinned;
@@ -162,15 +176,55 @@ async function realLookupArticles(ids: number[]): Promise<LookupResponse> {
   };
 }
 
-async function realListCategories(): Promise<Category[]> {
-  return request<Category[]>(`/categories`);
+async function realListCategories(scope?: ArticleScope): Promise<Category[]> {
+  const params: Record<string, string | string[] | number | boolean> = {};
+  if (scope?.department && scope.department.length)
+    params.department = scope.department;
+  if (scope?.source && scope.source.length) params.source = scope.source;
+  return request<Category[]>(
+    `/categories?${toSearchParams(params).toString()}`,
+  );
 }
 
-async function realListWriters(q?: string, limit?: number): Promise<Writer[]> {
-  const sp = new URLSearchParams();
-  if (q) sp.set("q", q);
-  if (limit) sp.set("limit", String(limit));
-  return request<Writer[]>(`/writers?${sp.toString()}`);
+async function realListWriters(
+  q?: string,
+  limit?: number,
+  scope?: ArticleScope,
+): Promise<Writer[]> {
+  const params: Record<string, string | string[] | number | boolean> = {};
+  if (q) params.q = q;
+  if (limit) params.limit = limit;
+  if (scope?.department && scope.department.length)
+    params.department = scope.department;
+  if (scope?.source && scope.source.length) params.source = scope.source;
+  return request<Writer[]>(`/writers?${toSearchParams(params).toString()}`);
+}
+
+async function realListDepartments(): Promise<Department[]> {
+  return request<Department[]>(`/departments`);
+}
+
+async function realGetStatus(): Promise<Status> {
+  return request<Status>(`/status`);
+}
+
+async function realListReads(): Promise<ReadsResponse> {
+  return authRequest<ReadsResponse>(`/me/reads`);
+}
+
+async function realMarkReads(items: ReadItem[]): Promise<ReadsSaved> {
+  return authRequest<ReadsSaved>(`/me/reads`, {
+    method: "POST",
+    body: JSON.stringify({ items }),
+  });
+}
+
+function realSendReadsBeacon(items: ReadItem[]): boolean {
+  if (typeof navigator === "undefined" || !navigator.sendBeacon) return false;
+  return navigator.sendBeacon(
+    `${API_BASE}/me/reads`,
+    new Blob([JSON.stringify({ items })], { type: "application/json" }),
+  );
 }
 
 async function realRegister(body: RegisterBody): Promise<Detail> {
@@ -243,7 +297,7 @@ async function realUpdatePreferences(patch: {
 }
 
 // Lazy-load mock module only when needed (avoids importing mock data in real mode).
-// 조건은 lib/auth/config.ts 의 isMockMode 와 같은 규칙이지만, 일부러 process.env 를 직접 적는다:
+//조건은 lib/auth/config.ts 의 isMockMode 와 같은 규칙이지만, 일부러 process.env 를 직접 적는다:
 // Next 가 빌드 때 NEXT_PUBLIC_* 와 NODE_ENV 를 리터럴로 바꿔야 번들러가 production 에서 이 분기와
 // mock 모듈(import)을 통째로 버린다. isMockMode 변수를 거치면 그 제거가 보장되지 않는다.
 // (deploy.yml 스모크 테스트가 번들에 mock 이 없는지 확인한다.)
@@ -257,12 +311,56 @@ async function mock() {
   throw new Error("mock API is not available in this build");
 }
 
+// sendReadsBeacon is synchronous, so it cannot use the async mock() loader.
+// The inline implementation mirrors mockMarkReads in lib/mock/departments.ts
+// but skips article ID validation (beacon is fire-and-forget on page unload).
+function mockSendReadsBeaconInline(items: ReadItem[]): boolean {
+  if (!USE_MOCK || typeof window === "undefined") return false;
+  try {
+    const authRaw = window.localStorage.getItem("skku-mock-auth");
+    if (!authRaw) return false;
+    const authState = JSON.parse(authRaw) as {
+      session?: { userId: string; expiresAt: string } | null;
+    };
+    if (
+      !authState.session ||
+      new Date(authState.session.expiresAt).getTime() <= Date.now()
+    ) {
+      return false;
+    }
+    const userId = authState.session.userId;
+    const key = `skku-mock-reads:${userId}`;
+    const raw = window.localStorage.getItem(key);
+    const reads: Record<string, string> = raw ? JSON.parse(raw) : {};
+    for (const item of items) {
+      const readAt = item.read_at || new Date().toISOString();
+      const prev = reads[String(item.article_id)];
+      if (!prev || readAt > prev) {
+        reads[String(item.article_id)] = readAt;
+      }
+    }
+    window.localStorage.setItem(key, JSON.stringify(reads));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export type ApiClient = {
   listArticles: (params: ArticleQuery) => Promise<ArticleListResponse>;
   getArticle: (id: number) => Promise<Article>;
   lookupArticles: (ids: number[]) => Promise<LookupResponse>;
-  listCategories: () => Promise<Category[]>;
-  listWriters: (q?: string, limit?: number) => Promise<Writer[]>;
+  listCategories: (scope?: ArticleScope) => Promise<Category[]>;
+  listWriters: (
+    q?: string,
+    limit?: number,
+    scope?: ArticleScope,
+  ) => Promise<Writer[]>;
+  listDepartments: () => Promise<Department[]>;
+  getStatus: () => Promise<Status>;
+  listReads: () => Promise<ReadsResponse>;
+  markReads: (items: ReadItem[]) => Promise<ReadsSaved>;
+  sendReadsBeacon: (items: ReadItem[]) => boolean;
   register: (body: RegisterBody) => Promise<Detail>;
   verifyEmail: (token: string) => Promise<Detail>;
   resendVerification: (email: string) => Promise<Detail>;
@@ -285,6 +383,11 @@ const realApi: ApiClient = {
   lookupArticles: realLookupArticles,
   listCategories: realListCategories,
   listWriters: realListWriters,
+  listDepartments: realListDepartments,
+  getStatus: realGetStatus,
+  listReads: realListReads,
+  markReads: realMarkReads,
+  sendReadsBeacon: realSendReadsBeacon,
   register: realRegister,
   verifyEmail: realVerifyEmail,
   resendVerification: realResendVerification,
@@ -305,8 +408,14 @@ const mockApi: ApiClient = {
   listArticles: async (p) => (await mock()).mockListArticles(p),
   getArticle: async (id) => (await mock()).mockGetArticle(id),
   lookupArticles: async (ids) => (await mock()).mockLookupArticles(ids),
-  listCategories: async () => (await mock()).mockListCategories(),
-  listWriters: async (q, limit) => (await mock()).mockListWriters(q, limit),
+  listCategories: async (scope) => (await mock()).mockListCategories(scope),
+  listWriters: async (q, limit, scope) =>
+    (await mock()).mockListWriters(q, limit, scope),
+  listDepartments: async () => (await mock()).mockListDepartments(),
+  getStatus: async () => (await mock()).mockGetStatus(),
+  listReads: async () => (await mock()).mockListReads(),
+  markReads: async (items) => (await mock()).mockMarkReads(items),
+  sendReadsBeacon: (items) => mockSendReadsBeaconInline(items),
   register: async (body) => (await mock()).mockRegister(body),
   verifyEmail: async (token) => (await mock()).mockVerifyEmail(token),
   resendVerification: async (email) =>

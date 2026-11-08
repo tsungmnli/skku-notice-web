@@ -35,6 +35,7 @@ import { useDebouncedValue } from "@mantine/hooks";
 import { ArticleCard } from "@/components/common/ArticleCard";
 import { NoticeCardSkeleton } from "@/components/common/NoticeCardSkeleton";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useReads } from "@/hooks/useReads";
 import { useNotices } from "./hooks/useNotices";
 import { useFilterOptions } from "./hooks/useFilterOptions";
 import { useNoticeQuery } from "./hooks/useNoticeQuery";
@@ -44,8 +45,9 @@ import {
   SORT_LABELS,
   categoryLabel,
 } from "@/utils/constants";
-import type { SortKey } from "@/lib/api/types";
+import type { Article, ArticleScope, SortKey } from "@/lib/api/types";
 import { QUICK_DUE_OPTIONS, type QuickDueKey } from "@/utils/date";
+import { StatusBanner } from "@/components/common/StatusBanner";
 import classes from "./Notices.module.css";
 
 const DEFAULT_SORT = "posted_desc";
@@ -57,11 +59,38 @@ const SORT_OPTIONS = Object.entries(SORT_LABELS).map(([value, label]) => ({
   label,
 }));
 
-function NoticesContent() {
+type NoticesContentProps = {
+  scope?: ArticleScope;
+  header?: React.ReactNode;
+  originOf?: (article: Article) => string | null;
+  statusScope?: ArticleScope;
+  hideAuthorFilter?: boolean;
+  hidePinnedFilter?: boolean;
+  hideZeroCategories?: boolean;
+  compactQuickFilters?: boolean;
+  hideDeadlineToggle?: boolean;
+};
+
+function NoticesContent({
+  scope,
+  header,
+  originOf,
+  statusScope,
+  hideAuthorFilter,
+  hidePinnedFilter,
+  hideZeroCategories,
+  compactQuickFilters,
+  hideDeadlineToggle,
+}: NoticesContentProps) {
   const { query, due, updateQuery } = useNoticeQuery();
-  const { categories, writers } = useFilterOptions();
+  const scopedQuery = useMemo<ArticleScope & typeof query>(
+    () => ({ ...(scope ?? {}), ...query }),
+    [scope, query],
+  );
+  const { categories, writers } = useFilterOptions(scope);
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { data, loading, error, refetch } = useNotices(query);
+  const { badgeOf, markRead } = useReads();
+  const { data, loading, error, refetch } = useNotices(scopedQuery);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeSearchInput, setActiveSearchInput] = useState(query.q || "");
   const [debounced] = useDebouncedValue(activeSearchInput, 300);
@@ -86,13 +115,38 @@ function NoticesContent() {
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (selectedCategories.length) count++;
-    if (selectedWriters.length) count++;
+    if (!hideAuthorFilter && selectedWriters.length) count++;
     if (query.date_from || query.date_to) count++;
     if (due) count++;
-    if (query.pinned && query.pinned !== DEFAULT_PINNED) count++;
+    if (!hidePinnedFilter && query.pinned && query.pinned !== DEFAULT_PINNED)
+      count++;
     if (query.has_deadline) count++;
     return count;
-  }, [selectedCategories, selectedWriters, query, due]);
+  }, [
+    selectedCategories,
+    selectedWriters,
+    query,
+    due,
+    hideAuthorFilter,
+    hidePinnedFilter,
+  ]);
+
+  // 카테고리 필터는 general이 아니면서 count > 0인 카테고리가 둘 이상일 때만 보여준다.
+  // hideZeroCategories forces filtering out zero-count categories entirely.
+  const hideCategoryFilter = useMemo(() => {
+    const eligible = categories.filter(
+      (c) => c.code !== "general" && c.count > 0,
+    );
+    if (hideZeroCategories) return eligible.length < 2;
+    return eligible.length < 2;
+  }, [categories, hideZeroCategories]);
+
+  const visibleCategories = useMemo(() => {
+    if (hideZeroCategories) {
+      return categories.filter((c) => c.count > 0);
+    }
+    return categories;
+  }, [categories, hideZeroCategories]);
 
   const handleFilterChange = useCallback(
     (updates: Record<string, string | string[] | null>) => {
@@ -160,7 +214,7 @@ function NoticesContent() {
 
   const filterPanel = (
     <FilterPanel
-      categories={categories}
+      categories={visibleCategories}
       writers={writers}
       selectedCategories={selectedCategories}
       selectedWriters={selectedWriters}
@@ -170,6 +224,11 @@ function NoticesContent() {
       hasDeadline={query.has_deadline || false}
       onChange={handleFilterChange}
       onReset={handleReset}
+      hideCategoryFilter={hideCategoryFilter}
+      hideAuthorFilter={hideAuthorFilter}
+      hidePinnedFilter={hidePinnedFilter}
+      hideDeadlineToggle={hideDeadlineToggle}
+      koreanDates={hideZeroCategories}
     />
   );
 
@@ -186,6 +245,10 @@ function NoticesContent() {
         {/* Main list */}
         <div className={classes.main}>
           <Stack gap={0}>
+            {header}
+
+            <StatusBanner scope={statusScope ?? scope} />
+
             {/* Search + mobile filter button */}
             <div className={classes.searchRow}>
               <TextInput
@@ -234,7 +297,8 @@ function NoticesContent() {
             </div>
 
             {/* Removable filter chips */}
-            {(selectedCategories.length > 0 || selectedWriters.length > 0) && (
+            {(selectedCategories.length > 0 ||
+              (!hideAuthorFilter && selectedWriters.length > 0)) && (
               <Group gap={6} className={classes.chips}>
                 {selectedCategories.map((c) => (
                   <Badge
@@ -256,57 +320,96 @@ function NoticesContent() {
                     {categoryLabel(c)}
                   </Badge>
                 ))}
-                {selectedWriters.map((w) => (
-                  <Badge
-                    key={w}
-                    size="sm"
-                    variant="light"
-                    color="gray"
-                    radius="sm"
-                    rightSection={
-                      <button
-                        className={classes.chipRemove}
-                        onClick={() => removeWriter(w)}
-                        aria-label={`${w} 필터 제거`}
-                      >
-                        <IconX size={10} />
-                      </button>
-                    }
-                  >
-                    {w}
-                  </Badge>
-                ))}
+                {!hideAuthorFilter &&
+                  selectedWriters.map((w) => (
+                    <Badge
+                      key={w}
+                      size="sm"
+                      variant="light"
+                      color="gray"
+                      radius="sm"
+                      rightSection={
+                        <button
+                          className={classes.chipRemove}
+                          onClick={() => removeWriter(w)}
+                          aria-label={`${w} 필터 제거`}
+                        >
+                          <IconX size={10} />
+                        </button>
+                      }
+                    >
+                      {w}
+                    </Badge>
+                  ))}
               </Group>
             )}
 
             <div
-              className={classes.quickFilters}
+              className={
+                compactQuickFilters
+                  ? classes.quickFiltersCompact
+                  : classes.quickFilters
+              }
               role="group"
-              aria-label="빠른 기간 필터"
+              aria-label="마감 기간 필터"
             >
-              <div className={classes.quickFilterHeader}>
-                <div>
-                  <Text size="sm" fw={600}>
-                    빠른 기간
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    오늘부터 마감까지 남은 기간으로 찾아보세요
-                  </Text>
+              {!compactQuickFilters && (
+                <div className={classes.quickFilterHeader}>
+                  <div>
+                    <Text size="sm" fw={600}>
+                      빠른 기간
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      오늘부터 마감까지 남은 기간으로 찾아보세요
+                    </Text>
+                  </div>
+                  {due && (
+                    <Badge
+                      size="sm"
+                      variant="light"
+                      color="skku-green"
+                      className={classes.quickFilterStatus}
+                    >
+                      선택됨
+                    </Badge>
+                  )}
                 </div>
-                {due && (
-                  <Badge
-                    size="sm"
-                    variant="light"
-                    color="skku-green"
-                    className={classes.quickFilterStatus}
-                  >
-                    선택됨
-                  </Badge>
-                )}
-              </div>
-              <div className={classes.quickFilterOptions}>
+              )}
+              {compactQuickFilters && (
+                <Text
+                  size="xs"
+                  fw={600}
+                  c="dimmed"
+                  className={classes.quickFilterLabel}
+                >
+                  마감
+                </Text>
+              )}
+              <div
+                className={
+                  compactQuickFilters
+                    ? classes.quickFilterOptionsCompact
+                    : classes.quickFilterOptions
+                }
+              >
                 {QUICK_DUE_OPTIONS.map((period) => {
                   const isActive = due === period.key;
+                  if (compactQuickFilters) {
+                    const chipLabel =
+                      period.key === "today" ? "오늘" : period.label;
+                    return (
+                      <button
+                        key={period.key}
+                        className={classes.quickFilterChip}
+                        data-active={isActive || undefined}
+                        onClick={() => handleQuickDue(period.key)}
+                        aria-pressed={isActive}
+                        aria-label={`마감 ${chipLabel}${isActive ? " (선택됨, 다시 누르면 해제)" : ""}`}
+                      >
+                        {chipLabel}
+                      </button>
+                    );
+                  }
                   return (
                     <Button
                       key={period.key}
@@ -322,6 +425,21 @@ function NoticesContent() {
                     </Button>
                   );
                 })}
+                {compactQuickFilters && hideDeadlineToggle && (
+                  <button
+                    className={classes.quickFilterChip}
+                    data-active={!!query.has_deadline || undefined}
+                    onClick={() =>
+                      handleFilterChange({
+                        has_deadline: query.has_deadline ? null : "true",
+                      })
+                    }
+                    aria-pressed={!!query.has_deadline}
+                    aria-label={`마감일 있는 공지만${query.has_deadline ? " (선택됨, 다시 누르면 해제)" : ""}`}
+                  >
+                    마감있는 공지만
+                  </button>
+                )}
               </div>
             </div>
 
@@ -380,6 +498,9 @@ function NoticesContent() {
                     article={article}
                     isFavorite={isFavorite(article.id)}
                     onToggleFavorite={toggleFavorite}
+                    badge={badgeOf(article)}
+                    onOpen={markRead}
+                    origin={originOf?.(article) ?? null}
                   />
                 ))}
               </div>
@@ -438,7 +559,29 @@ function NoticesContent() {
   );
 }
 
-export function NoticesClient() {
+type NoticesClientProps = {
+  scope?: ArticleScope;
+  header?: React.ReactNode;
+  originOf?: (article: Article) => string | null;
+  statusScope?: ArticleScope;
+  hideAuthorFilter?: boolean;
+  hidePinnedFilter?: boolean;
+  hideZeroCategories?: boolean;
+  compactQuickFilters?: boolean;
+  hideDeadlineToggle?: boolean;
+};
+
+export function NoticesClient({
+  scope,
+  header,
+  originOf,
+  statusScope,
+  hideAuthorFilter,
+  hidePinnedFilter,
+  hideZeroCategories,
+  compactQuickFilters,
+  hideDeadlineToggle,
+}: NoticesClientProps) {
   return (
     <Suspense
       fallback={
@@ -447,7 +590,17 @@ export function NoticesClient() {
         </Center>
       }
     >
-      <NoticesContent />
+      <NoticesContent
+        scope={scope}
+        header={header}
+        originOf={originOf}
+        statusScope={statusScope}
+        hideAuthorFilter={hideAuthorFilter}
+        hidePinnedFilter={hidePinnedFilter}
+        hideZeroCategories={hideZeroCategories}
+        compactQuickFilters={compactQuickFilters}
+        hideDeadlineToggle={hideDeadlineToggle}
+      />
     </Suspense>
   );
 }

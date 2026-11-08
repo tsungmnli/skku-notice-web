@@ -26,6 +26,7 @@ import dayjs from "dayjs";
 import { ArticleCard } from "@/components/common/ArticleCard";
 import { NoticeCardSkeleton } from "@/components/common/NoticeCardSkeleton";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useReads } from "@/hooks/useReads";
 import { calendarFeedUrl } from "@/lib/api/client";
 import { useFavoritesLookup } from "./hooks/useFavoritesLookup";
 import { CalendarSubscribeModal } from "./modules/CalendarSubscribeModal";
@@ -35,6 +36,7 @@ import classes from "./Favorites.module.css";
 export function FavoritesClient() {
   const { favorites, hydrated, isFavorite, toggleFavorite, removeFavorite } =
     useFavorites();
+  const { badgeOf, markRead } = useReads();
   const { data, loading, error, refetch } = useFavoritesLookup(
     favorites,
     hydrated,
@@ -203,6 +205,8 @@ export function FavoritesClient() {
                 isFavorite={isFavorite(article.id)}
                 onToggleFavorite={toggleFavorite}
                 showDateUnknown
+                badge={badgeOf(article)}
+                onOpen={markRead}
               />
             ))}
           </Box>

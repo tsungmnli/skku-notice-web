@@ -24,6 +24,7 @@ import classes from "./Header.module.css";
 
 const navItems = [
   { href: "/", label: "공지사항" },
+  { href: "/dept", label: "학과" },
   { href: "/favorites", label: "즐겨찾기" },
   { href: "/calendar", label: "캘린더" },
 ];
@@ -55,7 +56,9 @@ export function Header() {
 
         <Group gap="sm" className={classes.nav}>
           {navItems.map((item) => {
-            const active = pathname === item.href;
+            const active =
+              pathname === item.href ||
+              (item.href === "/dept" && pathname.startsWith("/dept"));
             return (
               <Button
                 key={item.href}

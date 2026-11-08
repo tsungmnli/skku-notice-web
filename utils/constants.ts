@@ -32,3 +32,6 @@ export const SEARCH_MAX_LENGTH = 100;
 
 /** 서버가 받는 page 상한 (초과하면 422). */
 export const MAX_PAGE = 100_000;
+
+/** 학과 추가 요청 폼 URL. 비어 있으면 "내 학과가 없어요" 링크를 표시하지 않는다. */
+export const DEPT_REQUEST_URL = process.env.NEXT_PUBLIC_DEPT_REQUEST_URL ?? "";

@@ -11,6 +11,7 @@ import {
   IconStar,
   IconCalendar,
   IconUserCircle,
+  IconSchool,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +21,7 @@ import classes from "./BottomTabs.module.css";
 
 const tabs = [
   { href: "/", label: "공지", icon: IconBell },
+  { href: "/dept", label: "학과", icon: IconSchool },
   { href: "/favorites", label: "즐겨찾기", icon: IconStar },
   { href: "/calendar", label: "캘린더", icon: IconCalendar },
 ];
@@ -43,7 +45,9 @@ export function BottomTabs() {
   return (
     <nav className={classes.nav} aria-label="하단 탭">
       {tabs.map((tab) => {
-        const active = pathname === tab.href;
+        const active =
+          pathname === tab.href ||
+          (tab.href === "/dept" && pathname.startsWith("/dept"));
         const Icon = tab.icon;
         return (
           <Link

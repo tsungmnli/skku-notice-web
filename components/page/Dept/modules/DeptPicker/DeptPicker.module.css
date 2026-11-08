@@ -1,0 +1,53 @@
+.collegeGroup {
+  gap: var(--sp-3);
+}
+
+.collegeTitle {
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+.deptItem {
+  gap: var(--sp-1);
+  padding-left: var(--sp-1);
+}
+
+.sourcesList {
+  gap: var(--sp-1);
+  padding-left: var(--sp-5);
+}
+
+.sourceRow {
+  gap: var(--sp-2);
+  min-height: 32px;
+}
+
+.sourceInfo {
+  gap: 0;
+}
+
+.sourceName {
+  line-height: 1.4;
+}
+
+.noPosts {
+  font-size: var(--fs-caption);
+  opacity: 0.7;
+}
+
+.lastPost {
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.requestLink {
+  font-size: var(--fs-sm);
+  color: var(--accent-green);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 150ms ease;
+}
+
+.requestLink:hover {
+  opacity: 0.8;
+}
