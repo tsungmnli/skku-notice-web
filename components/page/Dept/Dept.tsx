@@ -116,9 +116,14 @@ export function DeptClient() {
     (code: string): ArticleScope | null => {
       const dept = departmentsByCode.get(code);
       if (!dept) return null;
-      const selectedSources = selection.sources.filter((slug) =>
-        dept.sources.some((s) => s.slug === slug),
-      );
+      // Whole-dept selection covers every board of the dept, so it wins over
+      // any individually picked boards (same rule as the edit screen).
+      const wholeDept = selection.departments.includes(code);
+      const selectedSources = wholeDept
+        ? []
+        : selection.sources.filter((slug) =>
+            dept.sources.some((s) => s.slug === slug),
+          );
       const scope: ArticleScope = {};
       if (selectedSources.length > 0) {
         const common = dept.sources.find((s) => s.common);
@@ -133,7 +138,7 @@ export function DeptClient() {
       }
       return scope;
     },
-    [departmentsByCode, selection.sources],
+    [departmentsByCode, selection.sources, selection.departments],
   );
 
   const scopes = useMemo(
@@ -219,10 +224,15 @@ export function DeptClient() {
 
   const activeDeptSelectedSources = useMemo(() => {
     if (!activeDept) return [];
+    // Picking the whole dept means all of its boards (the edit screen shows
+    // them all checked), so a multi-board dept gets one chip per board, same
+    // as when every board is picked one by one. A single-board dept has
+    // nothing to split.
+    const wholeDept =
+      selection.departments.includes(activeDept.code) &&
+      activeDept.sources.length > 1;
     return activeDept.sources.filter(
-      (s) =>
-        selection.sources.includes(s.slug) ||
-        (selection.departments.includes(activeDept.code) && s.common),
+      (s) => wholeDept || selection.sources.includes(s.slug),
     );
   }, [activeDept, selection]);
 
@@ -325,9 +335,11 @@ export function DeptClient() {
     }
     if (seg === "dept") {
       const scope: ArticleScope = {};
-      const selectedSources = selection.sources.filter((slug) =>
-        activeDept.sources.some((s) => s.slug === slug),
-      );
+      const selectedSources = selection.departments.includes(activeDept.code)
+        ? []
+        : selection.sources.filter((slug) =>
+            activeDept.sources.some((s) => s.slug === slug),
+          );
       if (selectedSources.length > 0) {
         const common = activeDept.sources.find((s) => s.common);
         const slugs = new Set<string>(selectedSources);
@@ -351,6 +363,7 @@ export function DeptClient() {
     seg,
     activeScope,
     selection.sources,
+    selection.departments,
     activeSourceSlug,
   ]);
 
