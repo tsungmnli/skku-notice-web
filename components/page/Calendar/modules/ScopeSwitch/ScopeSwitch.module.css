@@ -1,0 +1,19 @@
+.control {
+  flex-shrink: 0;
+}
+
+.control [data-active] {
+  font-weight: 700;
+}
+
+.control:focus-within {
+  outline: 2px solid var(--accent-green);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 35.99em) {
+  .control {
+    font-size: var(--fs-xs);
+  }
+}

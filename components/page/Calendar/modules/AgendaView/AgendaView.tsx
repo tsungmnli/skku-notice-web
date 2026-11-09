@@ -1,6 +1,12 @@
 "use client";
 
-import { forwardRef } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Stack, Text, Group, ActionIcon, Center, Button } from "@mantine/core";
 import {
   IconStar,
@@ -10,7 +16,9 @@ import {
   IconCalendarEvent,
   IconLoader2,
   IconAlertCircle,
+  IconBuilding,
 } from "@tabler/icons-react";
+import type { ScopeFilter } from "../ScopeSwitch";
 import dayjs from "dayjs";
 import type { Article } from "@/lib/api/types";
 import { SEOUL_TZ, computeDDay, parseSeoul } from "@/utils/date";
@@ -25,7 +33,13 @@ type DayGroup = {
   articles: Article[];
 };
 
-function buildDayGroups(articles: Article[]): DayGroup[] {
+const COLLAPSE_THRESHOLD = 4;
+
+function buildDayGroups(
+  articles: Article[],
+  deptIdSet?: Set<number>,
+  sortDeptFirst?: boolean,
+): DayGroup[] {
   const today = dayjs.tz(new Date(), SEOUL_TZ).startOf("day");
   const currentYear = today.year();
   const map = new Map<string, Article[]>();
@@ -54,6 +68,12 @@ function buildDayGroups(articles: Article[]): DayGroup[] {
     else prefix = "";
 
     const sorted = [...items].sort((a, b) => {
+      if (sortDeptFirst && deptIdSet) {
+        const aDept = deptIdSet.has(a.id);
+        const bDept = deptIdSet.has(b.id);
+        if (aDept && !bDept) return -1;
+        if (!aDept && bDept) return 1;
+      }
       const ta = parseSeoul(a.deadline_at!);
       const tb = parseSeoul(b.deadline_at!);
       const aUnknown = ta.hour() === 23 && ta.minute() === 59;
@@ -106,6 +126,10 @@ type RowProps = {
   isFavorite: boolean;
   onToggleFavorite: (id: number) => void;
   isPast: boolean;
+  isDept?: boolean;
+  showDeptMarker?: boolean;
+  isToday?: boolean;
+  isTomorrow?: boolean;
 };
 
 function AgendaRow({
@@ -113,6 +137,10 @@ function AgendaRow({
   isFavorite,
   onToggleFavorite,
   isPast,
+  isDept,
+  showDeptMarker,
+  isToday,
+  isTomorrow,
 }: RowProps) {
   const time = article.deadline_at
     ? (() => {
@@ -128,6 +156,9 @@ function AgendaRow({
     <article
       className={classes.row}
       data-past={isPast || undefined}
+      data-today={isToday || undefined}
+      data-tomorrow={isTomorrow || undefined}
+      data-urgent={isToday || isTomorrow || undefined}
       style={{ borderLeftColor: categoryColor(primaryCat) }}
     >
       <ActionIcon
@@ -180,10 +211,25 @@ function AgendaRow({
           <Text size="xs" c="dimmed" className={classes.writer}>
             {article.writer}
           </Text>
+          {isDept && showDeptMarker && (
+            <span className={classes.deptBadge}>
+              <IconBuilding size={11} className={classes.deptBadgeIcon} />내
+              학과
+              {article.department_name && (
+                <span className={classes.deptBadgeName}>
+                  · {article.department_name}
+                </span>
+              )}
+            </span>
+          )}
         </Group>
       </div>
     </article>
   );
+}
+
+function SkeletonBar() {
+  return <div className={classes.skeletonBar} aria-hidden="true" />;
 }
 
 type Props = {
@@ -196,8 +242,15 @@ type Props = {
   onLoadPast: () => void;
   onLoadMore: () => void;
   onResetFilters: () => void;
+  onBackToToday: () => void;
   allFilteredOut: boolean;
   todayStr: string;
+  deptIdSet?: Set<number>;
+  scopeNotice?: React.ReactNode;
+  noItemsInWindow?: boolean;
+  activeScope?: ScopeFilter;
+  hasDepts?: boolean;
+  onSwitchScope?: (scope: ScopeFilter) => void;
 };
 
 export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
@@ -211,12 +264,61 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
     onLoadPast,
     onLoadMore,
     onResetFilters,
+    onBackToToday,
     allFilteredOut,
     todayStr,
+    deptIdSet,
+    scopeNotice,
+    noItemsInWindow,
+    activeScope,
+    hasDepts,
+    onSwitchScope,
   },
   ref,
 ) {
-  const groups = buildDayGroups(articles);
+  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+  const internalRef = useRef<HTMLDivElement>(null);
+  const prevHeightRef = useRef(0);
+  const firstDateRef = useRef<string | null>(null);
+
+  const toggleCollapse = useCallback((dateStr: string) => {
+    setCollapsedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateStr)) next.delete(dateStr);
+      else next.add(dateStr);
+      return next;
+    });
+  }, []);
+
+  const setRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      internalRef.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref)
+        (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    },
+    [ref],
+  );
+
+  const groups = buildDayGroups(articles, deptIdSet, activeScope === "all");
+
+  // Preserve scroll position when items are prepended (loadPast)
+  useLayoutEffect(() => {
+    const el = internalRef.current;
+    if (!el) return;
+    const newFirst = groups[0]?.dateStr ?? null;
+    if (
+      firstDateRef.current &&
+      newFirst &&
+      newFirst < firstDateRef.current &&
+      prevHeightRef.current > 0
+    ) {
+      const heightDiff = el.scrollHeight - prevHeightRef.current;
+      if (heightDiff > 0) window.scrollBy(0, heightDiff);
+    }
+    prevHeightRef.current = el.scrollHeight;
+    firstDateRef.current = newFirst;
+  });
 
   if (loading && articles.length === 0) {
     return (
@@ -231,7 +333,7 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
     );
   }
 
-  if (error) {
+  if (error && articles.length === 0) {
     return (
       <Center p={40}>
         <Stack align="center" gap="sm">
@@ -268,76 +370,214 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
     );
   }
 
-  if (groups.length === 0 && !loading) {
+  if (noItemsInWindow && groups.length === 0 && !loading) {
+    const isDeptScope = activeScope === "dept";
     return (
       <Center p={40}>
         <Stack align="center" gap="sm">
           <IconCalendarEvent size={36} color="var(--mantine-color-gray-4)" />
-          <Text size="sm" c="dimmed">
-            이 기간에 표시할 공지가 없습니다
+          <Text size="sm" c="dimmed" ta="center">
+            {isDeptScope
+              ? "이 기간에 학과 마감 공지가 없습니다"
+              : "이 기간에 표시할 공지가 없습니다"}
           </Text>
+          <Group gap="xs">
+            {isDeptScope && hasDepts && onSwitchScope && (
+              <Button
+                variant="light"
+                size="sm"
+                color="skku-green"
+                onClick={() => onSwitchScope("all")}
+              >
+                모두 보기
+              </Button>
+            )}
+            <Button variant="subtle" size="sm" onClick={onLoadMore}>
+              다음 30일 보기
+            </Button>
+            {hasPast && (
+              <Button
+                variant="subtle"
+                size="compact-xs"
+                onClick={onBackToToday}
+              >
+                오늘로
+              </Button>
+            )}
+          </Group>
         </Stack>
       </Center>
     );
   }
 
+  const tomorrowStr = dayjs
+    .tz(todayStr, SEOUL_TZ)
+    .add(1, "day")
+    .format("YYYY-MM-DD");
+
   return (
-    <div ref={ref} className={classes.agenda}>
-      {hasPast && (
-        <Button
-          variant="subtle"
-          size="sm"
-          fullWidth
-          onClick={onLoadPast}
-          leftSection={<IconChevronUp size={16} />}
-          className={classes.loadMoreBtn}
-        >
-          이전 30일 보기
-        </Button>
+    <div ref={setRef} className={classes.agenda}>
+      {scopeNotice}
+
+      {/* Top controls: load past + back to today */}
+      {(hasPast || loading) && (
+        <div className={classes.listControls}>
+          {hasPast && (
+            <Button
+              variant="subtle"
+              size="sm"
+              onClick={onLoadPast}
+              leftSection={<IconChevronUp size={16} />}
+              loading={loading}
+              className={classes.loadMoreBtn}
+            >
+              이전 30일
+            </Button>
+          )}
+          {hasPast && (
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              onClick={onBackToToday}
+              className={classes.todayLink}
+            >
+              오늘로
+            </Button>
+          )}
+        </div>
       )}
+
+      {/* Inline skeleton at top while loading past */}
+      {loading && articles.length > 0 && hasPast && <SkeletonBar />}
 
       {groups.map((group) => {
         const isPast = group.dateStr < todayStr;
+        const isToday = group.dateStr === todayStr;
+        const isTomorrow = group.dateStr === tomorrowStr;
+        const isLarge = group.articles.length > COLLAPSE_THRESHOLD;
+        const collapsed = collapsedDays.has(group.dateStr);
+
+        const deptItems =
+          activeScope === "all" && deptIdSet
+            ? group.articles.filter((a) => deptIdSet.has(a.id))
+            : [];
+        const campusItems =
+          activeScope === "all" && deptIdSet
+            ? group.articles.filter((a) => !deptIdSet.has(a.id))
+            : [];
+
+        let visibleArticles: Article[];
+        let hiddenCount = 0;
+        if (isLarge && collapsed) {
+          if (activeScope === "all" && deptItems.length > 0) {
+            visibleArticles = deptItems;
+            hiddenCount = campusItems.length;
+          } else {
+            visibleArticles = group.articles.slice(0, COLLAPSE_THRESHOLD);
+            hiddenCount = group.articles.length - COLLAPSE_THRESHOLD;
+          }
+        } else {
+          visibleArticles = group.articles;
+        }
+
         return (
           <section
             key={group.dateStr}
             id={`day-${group.dateStr}`}
             className={classes.daySection}
           >
-            <div className={classes.dayHeader} data-past={isPast || undefined}>
-              <Text size="sm" fw={700} className={classes.dayLabel}>
-                {group.label}
-              </Text>
-              <Text size="xs" c="dimmed" className={classes.dayCount}>
-                {group.articles.length}건
-              </Text>
+            <div
+              className={classes.dayHeader}
+              data-past={isPast || undefined}
+              data-today={isToday || undefined}
+            >
+              <Group gap="xs" align="center" wrap="nowrap">
+                <Text size="sm" fw={700} className={classes.dayLabel}>
+                  {group.label}
+                </Text>
+                {isToday && (
+                  <span className={classes.todayTag} aria-label="오늘">
+                    오늘
+                  </span>
+                )}
+              </Group>
+              <Group gap="xs" align="center" wrap="nowrap">
+                <Text size="xs" c="dimmed" className={classes.dayCount}>
+                  {group.articles.length}건
+                </Text>
+                {isLarge && (
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    onClick={() => toggleCollapse(group.dateStr)}
+                    aria-expanded={!collapsed}
+                    aria-label={collapsed ? "펼치기" : "접기"}
+                    className={classes.collapseBtn}
+                  >
+                    {collapsed ? (
+                      <IconChevronDown size={14} />
+                    ) : (
+                      <IconChevronUp size={14} />
+                    )}
+                  </ActionIcon>
+                )}
+              </Group>
             </div>
             <Stack gap={0}>
-              {group.articles.map((article) => (
+              {visibleArticles.map((article) => (
                 <AgendaRow
                   key={article.id}
                   article={article}
                   isFavorite={isFavorite(article.id)}
                   onToggleFavorite={onToggleFavorite}
                   isPast={isPast}
+                  isDept={deptIdSet?.has(article.id)}
+                  showDeptMarker={activeScope === "all"}
+                  isToday={isToday}
+                  isTomorrow={isTomorrow}
                 />
               ))}
+              {hiddenCount > 0 && (
+                <button
+                  type="button"
+                  className={classes.moreBtn}
+                  onClick={() => toggleCollapse(group.dateStr)}
+                  aria-expanded={!collapsed}
+                >
+                  +{hiddenCount}건 더 보기
+                </button>
+              )}
             </Stack>
           </section>
         );
       })}
 
-      <Button
-        variant="subtle"
-        size="sm"
-        fullWidth
-        onClick={onLoadMore}
-        leftSection={<IconChevronDown size={16} />}
-        loading={loading}
-        className={classes.loadMoreBtn}
-      >
-        다음 30일 보기
-      </Button>
+      {/* Inline skeleton at bottom while loading more */}
+      {loading && articles.length > 0 && <SkeletonBar />}
+
+      {/* Bottom controls: load more + back to today */}
+      <div className={classes.listControls}>
+        <Button
+          variant="subtle"
+          size="sm"
+          onClick={onLoadMore}
+          leftSection={<IconChevronDown size={16} />}
+          loading={loading}
+          className={classes.loadMoreBtn}
+        >
+          다음 30일
+        </Button>
+        {hasPast && (
+          <Button
+            variant="subtle"
+            size="compact-xs"
+            onClick={onBackToToday}
+            className={classes.todayLink}
+          >
+            오늘로
+          </Button>
+        )}
+      </div>
     </div>
   );
 });

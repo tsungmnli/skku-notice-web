@@ -4,8 +4,50 @@
   gap: 0;
 }
 
+.listControls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.listControls:last-child {
+  border-bottom: 0;
+  border-top: 1px solid var(--surface-border);
+}
+
 .loadMoreBtn {
-  margin: var(--sp-2) 0;
+  flex-shrink: 0;
+}
+
+.todayLink {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Inline skeleton bar shown while extending window */
+.skeletonBar {
+  height: 56px;
+  margin: var(--sp-1) var(--sp-3);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--surface-hover) 25%,
+    var(--surface-border) 50%,
+    var(--surface-hover) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .daySection {
@@ -23,10 +65,20 @@
   background: var(--app-bg);
   border-bottom: 1px solid var(--surface-border);
   backdrop-filter: blur(8px);
+  transition: background-color 150ms ease;
 }
 
 .dayHeader[data-past] {
   opacity: 0.6;
+}
+
+.dayHeader[data-today] {
+  background: var(--skku-green-0);
+  border-bottom-color: var(--accent-green);
+}
+
+html[data-mantine-color-scheme="dark"] .dayHeader[data-today] {
+  background: rgba(62, 156, 124, 0.12);
 }
 
 .dayLabel {
@@ -35,6 +87,32 @@
 
 .dayCount {
   flex-shrink: 0;
+}
+
+.todayTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-green);
+  color: #fff;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+html[data-mantine-color-scheme="dark"] .todayTag {
+  color: #10251b;
+}
+
+.collapseBtn {
+  flex-shrink: 0;
+}
+
+.collapseBtn:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: -2px;
 }
 
 .row {
@@ -53,6 +131,23 @@
 
 .row[data-past] {
   opacity: 0.5;
+}
+
+/* Today/tomorrow urgency treatment */
+.row[data-urgent] {
+  background: rgba(220, 38, 38, 0.04);
+}
+
+.row[data-urgent]:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+html[data-mantine-color-scheme="dark"] .row[data-urgent] {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+html[data-mantine-color-scheme="dark"] .row[data-urgent]:hover {
+  background: rgba(220, 38, 38, 0.15);
 }
 
 .starBtn {
@@ -149,12 +244,78 @@
   white-space: nowrap;
 }
 
+.deptBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--mantine-color-skku-green-6);
+  color: #fff;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+html[data-mantine-color-scheme="dark"] .deptBadge {
+  background: var(--mantine-color-skku-green-4);
+  color: #fff;
+}
+
+.deptBadgeIcon {
+  flex-shrink: 0;
+}
+
+.deptBadgeName {
+  font-weight: 500;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.moreBtn {
+  display: block;
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-bottom: 1px solid var(--surface-border);
+  background: transparent;
+  color: var(--accent-green);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.moreBtn:hover {
+  background: var(--surface-hover);
+}
+
+.moreBtn:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: -2px;
+}
+
+@media (max-width: 30em) {
+  .deptBadgeName {
+    display: none;
+  }
+}
+
 @media (max-width: 47.99em) {
   .row {
     padding: var(--sp-2) var(--sp-2);
   }
 
   .dayHeader {
+    padding: var(--sp-2);
+  }
+
+  .listControls {
     padding: var(--sp-2);
   }
 }

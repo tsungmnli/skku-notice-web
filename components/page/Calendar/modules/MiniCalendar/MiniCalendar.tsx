@@ -1,12 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActionIcon, Button, Group, Text, Collapse } from "@mantine/core";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconChevronDown,
-} from "@tabler/icons-react";
+import { ActionIcon, Button, Group, Text } from "@mantine/core";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { todayInSeoul } from "@/utils/date";
 import { categoryColor } from "@/lib/calendar/categories";
@@ -18,17 +14,23 @@ type DayMeta = {
   dateStr: string;
   count: number;
   categories: string[];
+  deptCount?: number;
 };
 
 type Props = {
   dayMetaMap: Map<string, DayMeta>;
   onDayClick: (dateStr: string) => void;
   activeDateStr: string | null;
+  showDeptMarker?: boolean;
 };
 
-export function MiniCalendar({ dayMetaMap, onDayClick, activeDateStr }: Props) {
+export function MiniCalendar({
+  dayMetaMap,
+  onDayClick,
+  activeDateStr,
+  showDeptMarker,
+}: Props) {
   const [month, setMonth] = useState(() => todayInSeoul().startOf("month"));
-  const [mobileOpen, setMobileOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const today = todayInSeoul().startOf("day");
@@ -82,7 +84,7 @@ export function MiniCalendar({ dayMetaMap, onDayClick, activeDateStr }: Props) {
 
   const monthLabel = month.format("YYYY년 M월");
 
-  const content = (
+  return (
     <div className={classes.mini}>
       <Group justify="space-between" align="center" className={classes.header}>
         <Group gap="xs">
@@ -139,6 +141,20 @@ export function MiniCalendar({ dayMetaMap, onDayClick, activeDateStr }: Props) {
           const isActive = activeDateStr === dateStr;
           const hasItems = meta && meta.count > 0;
           const dots = (meta?.categories ?? []).slice(0, 3);
+          const hasDept = showDeptMarker && (meta?.deptCount ?? 0) > 0;
+          const deptN = meta?.deptCount ?? 0;
+          const campusN = meta ? meta.count - deptN : 0;
+
+          const ariaParts = [dateStr];
+          if (hasItems) {
+            ariaParts.push(`마감 ${meta!.count}건`);
+            if (showDeptMarker) {
+              if (deptN > 0) ariaParts.push(`학과 ${deptN}건`);
+              if (campusN > 0) ariaParts.push(`학교 ${campusN}건`);
+            }
+          } else {
+            ariaParts.push("마감 없음");
+          }
 
           return (
             <button
@@ -149,8 +165,9 @@ export function MiniCalendar({ dayMetaMap, onDayClick, activeDateStr }: Props) {
               data-weekend={isWeekend || undefined}
               data-active={isActive || undefined}
               data-has-items={hasItems || undefined}
+              data-has-dept={hasDept || undefined}
               onClick={() => handleDayClick(dateStr)}
-              aria-label={`${dateStr}${hasItems ? `, 마감 ${meta!.count}건` : ", 마감 없음"}`}
+              aria-label={ariaParts.join(", ")}
               aria-pressed={isActive}
             >
               <span className={classes.dayNumber}>{day.date()}</span>
@@ -171,35 +188,6 @@ export function MiniCalendar({ dayMetaMap, onDayClick, activeDateStr }: Props) {
             </button>
           );
         })}
-      </div>
-    </div>
-  );
-
-  return (
-    <div className={classes.wrapper}>
-      {/* Desktop: always visible */}
-      <div className={classes.desktop}>{content}</div>
-
-      {/* Mobile: collapsible */}
-      <div className={classes.mobile}>
-        <Button
-          variant="subtle"
-          size="sm"
-          fullWidth
-          onClick={() => setMobileOpen((o) => !o)}
-          rightSection={
-            <IconChevronDown
-              size={16}
-              style={{
-                transform: mobileOpen ? "rotate(180deg)" : "none",
-                transition: "transform 150ms ease",
-              }}
-            />
-          }
-        >
-          {monthLabel}
-        </Button>
-        <Collapse expanded={mobileOpen}>{content}</Collapse>
       </div>
     </div>
   );
