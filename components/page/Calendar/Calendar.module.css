@@ -4,24 +4,24 @@
   padding: var(--sp-4) var(--container-px) var(--sp-7);
 }
 
-/* Sticky top bar: scope switch + today jump stay reachable while scrolling */
-.stickyTop {
-  position: sticky;
-  top: var(--header-h);
-  z-index: 20;
-  background: var(--app-bg);
-  padding: var(--sp-1) 0 var(--sp-2);
-  margin-top: calc(-1 * var(--sp-1));
-  border-bottom: 1px solid var(--surface-border);
+/* Title block scrolls away; only the compact switch bar is sticky */
+.titleSection {
+  padding: 0 0 var(--sp-1);
 }
 
-.topBar {
-  padding: var(--sp-1) 0;
-}
-
-.titleBlock {
+.pageTitle {
   min-width: 0;
-  flex-shrink: 1;
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stickyActions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
 }
 
 .dateRange {
@@ -30,16 +30,36 @@
   text-overflow: ellipsis;
 }
 
-.todayLink {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
 .weeklySummary {
   padding-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Compact sticky bar: title + scope switch + today jump */
+.stickyBar {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 20;
+  background: var(--app-bg);
+  padding: var(--sp-1) 0;
+  border-bottom: 1px solid var(--surface-border);
+  /* Shared offset for downstream sticky elements */
+  --calendar-sticky-h: 40px;
+}
+
+.stickyBarInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  min-height: 36px;
+}
+
+.todayLink {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Desktop filters: always visible */
@@ -78,6 +98,10 @@
   outline-offset: -2px;
 }
 
+.controlsToggle :focus:not(:focus-visible) {
+  outline: none;
+}
+
 .mobileControlsContent {
   display: flex;
   flex-direction: column;
@@ -98,7 +122,7 @@
 
 .sideCol {
   position: sticky;
-  top: calc(var(--header-h) + var(--sp-2));
+  top: calc(var(--header-h) + var(--calendar-sticky-h, 40px) + var(--sp-2));
 }
 
 @media (max-width: 63.99em) {
@@ -106,8 +130,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .sideCol {
-    position: static;
-    order: -1;
+    display: none;
   }
 
   /* Mobile: hide desktop filters, show collapsible controls instead */
@@ -156,17 +179,17 @@
   gap: 6px;
 }
 
-.legendRing {
+.legendDot {
   display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius-sm);
-  border: 2px solid var(--mantine-color-skku-green-6);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mantine-color-skku-green-6);
   flex-shrink: 0;
 }
 
-html[data-mantine-color-scheme="dark"] .legendRing {
-  border-color: var(--mantine-color-skku-green-4);
+html[data-mantine-color-scheme="dark"] .legendDot {
+  background: var(--mantine-color-skku-green-4);
 }
 
 .legendIcon {
@@ -182,4 +205,9 @@ html[data-mantine-color-scheme="dark"] .legendIcon {
   .pageContainer {
     padding-inline: 10px;
   }
+}
+
+/* Suppress mouse-click focus outlines on all interactive elements in calendar */
+.pageContainer :focus:not(:focus-visible) {
+  outline: none;
 }

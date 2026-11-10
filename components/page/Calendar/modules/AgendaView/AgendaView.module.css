@@ -51,12 +51,14 @@
 }
 
 .daySection {
-  scroll-margin-top: calc(var(--header-h) + var(--sp-2));
+  scroll-margin-top: calc(
+    var(--header-h) + var(--calendar-sticky-h, 40px) + var(--sp-2)
+  );
 }
 
 .dayHeader {
   position: sticky;
-  top: var(--header-h);
+  top: calc(var(--header-h) + var(--calendar-sticky-h, 40px));
   z-index: 10;
   display: flex;
   align-items: center;
@@ -87,6 +89,48 @@ html[data-mantine-color-scheme="dark"] .dayHeader[data-today] {
 
 .dayCount {
   flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.deptCountText {
+  color: var(--mantine-color-skku-green-6);
+  font-weight: 600;
+}
+
+html[data-mantine-color-scheme="dark"] .deptCountText {
+  color: var(--mantine-color-skku-green-4);
+}
+
+/* B5: sub-group labels and divider */
+.subGroupLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px var(--sp-3) 2px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--mantine-color-skku-green-6);
+  background: var(--surface-hover);
+}
+
+html[data-mantine-color-scheme="dark"] .subGroupLabel {
+  color: var(--mantine-color-skku-green-4);
+}
+
+.subGroupIcon {
+  flex-shrink: 0;
+}
+
+.deptCampusDivider {
+  display: flex;
+  align-items: center;
+  padding: 3px var(--sp-3);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--text-muted);
+  border-top: 1px dashed var(--surface-border-strong);
+  border-bottom: 1px dashed var(--surface-border-strong);
+  background: var(--surface-card);
 }
 
 .todayTag {
@@ -113,6 +157,10 @@ html[data-mantine-color-scheme="dark"] .todayTag {
 .collapseBtn:focus-visible {
   outline: 2px solid var(--accent-green);
   outline-offset: -2px;
+}
+
+.collapseBtn :focus:not(:focus-visible) {
+  outline: none;
 }
 
 .row {
@@ -153,6 +201,10 @@ html[data-mantine-color-scheme="dark"] .row[data-urgent]:hover {
 .starBtn {
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+.starBtn :focus:not(:focus-visible) {
+  outline: none;
 }
 
 .rowBody {
@@ -244,6 +296,7 @@ html[data-mantine-color-scheme="dark"] .row[data-urgent]:hover {
   white-space: nowrap;
 }
 
+/* B4: shorter department marker — icon + name only */
 .deptBadge {
   display: inline-flex;
   align-items: center;
@@ -251,29 +304,24 @@ html[data-mantine-color-scheme="dark"] .row[data-urgent]:hover {
   padding: 1px 6px;
   border-radius: var(--radius-sm);
   font-size: var(--fs-caption);
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
-  background: var(--mantine-color-skku-green-6);
-  color: #fff;
+  background: rgba(47, 115, 85, 0.1);
+  color: var(--mantine-color-skku-green-6);
   flex-shrink: 0;
   line-height: 1.4;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 html[data-mantine-color-scheme="dark"] .deptBadge {
-  background: var(--mantine-color-skku-green-4);
-  color: #fff;
+  background: rgba(62, 156, 124, 0.15);
+  color: var(--mantine-color-skku-green-4);
 }
 
 .deptBadgeIcon {
   flex-shrink: 0;
-}
-
-.deptBadgeName {
-  font-weight: 500;
-  opacity: 0.9;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
 }
 
 .moreBtn {
@@ -300,9 +348,13 @@ html[data-mantine-color-scheme="dark"] .deptBadge {
   outline-offset: -2px;
 }
 
+.moreBtn :focus:not(:focus-visible) {
+  outline: none;
+}
+
 @media (max-width: 30em) {
-  .deptBadgeName {
-    display: none;
+  .deptBadge {
+    max-width: 90px;
   }
 }
 

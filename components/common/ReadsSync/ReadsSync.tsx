@@ -53,15 +53,17 @@ export function ReadsSync() {
       void (async () => {
         const localReads = getLocalReadsForUpload();
         if (localReads.length > 0) {
+          const uploaded: typeof localReads = [];
           for (let i = 0; i < localReads.length; i += BATCH_SIZE) {
             const batch = localReads.slice(i, i + BATCH_SIZE);
             try {
               await api.markReads(batch);
+              uploaded.push(...batch);
             } catch {
-              // ignore merge errors
+              // 실패한 배치는 로컬에 남겨 두고 다음 로그인 때 다시 올린다
             }
           }
-          clearLocalReadsAfterMerge();
+          clearLocalReadsAfterMerge(uploaded);
         }
         try {
           const resp = await api.listReads();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Stack, Group, Text, Button, Alert } from "@mantine/core";
+import { Stack, Text, Button, Alert } from "@mantine/core";
 import {
   IconAlertCircle,
   IconInfoCircle,
@@ -50,6 +50,7 @@ export function CalendarClient() {
     jumpToDate,
     backToToday,
     hasPast,
+    pastLoadToken,
   } = useCalendarArticles(scope, selectionActive);
 
   const { scope: activeScope, setScope } = useCalendarScope(
@@ -146,11 +147,13 @@ export function CalendarClient() {
     return map;
   }, [filteredArticles, deptIdSet]);
 
-  // Weekly summary (computed from already-loaded data)
+  // Weekly summary: next 7 days including today.
+  // Total reflects category/favorite filters; dept figure is independent of
+  // category/favorite filters (computed from scope-filtered articles only).
   const weeklySummary = useMemo(() => {
     if (!hydrated || loading) return null;
     const today = todayInSeoul().startOf("day");
-    const weekEnd = today.add(7, "day");
+    const weekEnd = today.add(6, "day"); // today + 6 = 7 days inclusive
     let total = 0;
     let deptTotal = 0;
     for (const a of filteredArticles) {
@@ -158,11 +161,26 @@ export function CalendarClient() {
       const d = parseSeoul(a.deadline_at).startOf("day");
       if (d.isBefore(today) || d.isAfter(weekEnd)) continue;
       total++;
-      if (deptIdSet.has(a.id)) deptTotal++;
     }
-    if (total === 0) return null;
+    // Dept figure: from scopeFiltered, ignoring category/favorite filters
+    if (selectionActive) {
+      for (const a of scopeFiltered) {
+        if (!a.deadline_at) continue;
+        const d = parseSeoul(a.deadline_at).startOf("day");
+        if (d.isBefore(today) || d.isAfter(weekEnd)) continue;
+        if (deptIdSet.has(a.id)) deptTotal++;
+      }
+    }
+    if (total === 0 && deptTotal === 0) return null;
     return { total, deptTotal };
-  }, [filteredArticles, deptIdSet, hydrated, loading]);
+  }, [
+    filteredArticles,
+    scopeFiltered,
+    deptIdSet,
+    selectionActive,
+    hydrated,
+    loading,
+  ]);
 
   const allFilteredOut =
     hydrated &&
@@ -232,7 +250,7 @@ export function CalendarClient() {
           variant="light"
           className={classes.inlineNotice}
         >
-          학과 마감 공지를 불러오지 못했습니다. 학교 전체 공지만 표시됩니다.
+          학과 마감 공지를 불러오지 못했습니다. 학교 공지만 표시됩니다.
         </Alert>
       );
     }
@@ -244,7 +262,7 @@ export function CalendarClient() {
           variant="light"
           className={classes.inlineNotice}
         >
-          학교 전체 마감 공지를 불러오지 못했습니다. 학과 공지만 표시됩니다.
+          학교 공지 마감을 불러오지 못했습니다. 학과 공지만 표시됩니다.
         </Alert>
       );
     }
@@ -256,7 +274,7 @@ export function CalendarClient() {
           variant="light"
           className={classes.inlineNotice}
         >
-          선택한 학과가 없어 학교 전체 공지만 표시됩니다.{" "}
+          선택한 학과가 없어 학교 공지만 표시됩니다.{" "}
           <Link href="/dept/edit" className={classes.inlineLink}>
             학과 선택하기
           </Link>
@@ -270,7 +288,7 @@ export function CalendarClient() {
   const noDeptSelected =
     deptHydrated &&
     !selectionActive &&
-    (activeScope === "dept" || activeScope === "all");
+    activeScope === "dept";
 
   if (error) {
     return (
@@ -287,26 +305,40 @@ export function CalendarClient() {
     return (
       <div className={classes.pageContainer}>
         <Stack gap="md">
-          <Group
-            justify="space-between"
-            align="center"
-            className={classes.topBar}
-          >
-            <div>
-              <Text fw={700} size="lg">
+          {/* Compact sticky bar: title + scope switch + today jump (one row) */}
+          <div className={classes.stickyBar}>
+            <div className={classes.stickyBarInner}>
+              <Text fw={700} size="lg" className={classes.pageTitle}>
                 마감 캘린더
               </Text>
-              <Text size="xs" c="dimmed">
-                {window.from.format("YYYY.MM.DD")} ~{" "}
-                {window.to.format("YYYY.MM.DD")}
-              </Text>
+              <div className={classes.stickyActions}>
+                {hasPast && (
+                  <Button
+                    variant="subtle"
+                    size="compact-xs"
+                    onClick={backToToday}
+                    className={classes.todayLink}
+                  >
+                    오늘로
+                  </Button>
+                )}
+                <ScopeSwitch
+                  value={activeScope}
+                  onChange={setScope}
+                  hasDepts={selectionActive}
+                  deptCount={deptCount}
+                  campusCount={campusCount}
+                />
+              </div>
             </div>
-            {hasPast && (
-              <Button variant="subtle" size="sm" onClick={backToToday}>
-                오늘로 돌아가기
-              </Button>
-            )}
-          </Group>
+          </div>
+
+          <div className={classes.titleSection}>
+            <Text size="xs" c="dimmed" className={classes.dateRange}>
+              {window.from.format("YYYY.MM.DD")} ~{" "}
+              {window.to.format("YYYY.MM.DD")}
+            </Text>
+          </div>
 
           {hydrated && (
             <FilterBar
@@ -349,7 +381,7 @@ export function CalendarClient() {
                     size="compact-xs"
                     onClick={() => setScope("campus")}
                   >
-                    학교 전체 보기
+                    학교 공지 보기
                   </Button>
                 </Stack>
               </div>
@@ -367,6 +399,13 @@ export function CalendarClient() {
     );
   }
 
+  const selectedDeptCount = selection.departments.length;
+
+  // B4: show per-row dept marker in "모두" view, and in "내 학과" when 2+ depts
+  const showDeptMarkerPerRow =
+    activeScope === "all" ||
+    (activeScope === "dept" && selectionActive && selectedDeptCount >= 2);
+
   const filterBarEl = hydrated ? (
     <FilterBar
       favoritesOnly={prefs.favorites_only}
@@ -380,28 +419,43 @@ export function CalendarClient() {
     />
   ) : null;
 
+  const miniCalendarEl = (
+    <MiniCalendar
+      dayMetaMap={dayMetaMap}
+      onDayClick={handleDayClick}
+      activeDateStr={null}
+      showDeptMarker={activeScope === "all" && selectionActive}
+    />
+  );
+
+  const legendEl =
+    activeScope === "all" && selectionActive ? (
+      <div className={classes.legend}>
+        <span className={classes.legendItem}>
+          <span className={classes.legendDot} />
+          <Text size="xs" c="dimmed">
+            점 = 내 학과 마감일
+          </Text>
+        </span>
+        <span className={classes.legendItem}>
+          <IconBuilding size={12} className={classes.legendIcon} />
+          <Text size="xs" c="dimmed">
+            내 학과 공지가 위에 표시
+          </Text>
+        </span>
+      </div>
+    ) : null;
+
   return (
     <div className={classes.pageContainer}>
       <Stack gap="sm">
-        {/* Sticky top bar with scope switch + today jump */}
-        <div className={classes.stickyTop}>
-          <Group
-            justify="space-between"
-            align="center"
-            className={classes.topBar}
-            wrap="nowrap"
-            gap="sm"
-          >
-            <div className={classes.titleBlock}>
-              <Text fw={700} size="lg">
-                마감 캘린더
-              </Text>
-              <Text size="xs" c="dimmed" className={classes.dateRange}>
-                {window.from.format("YYYY.MM.DD")} ~{" "}
-                {window.to.format("YYYY.MM.DD")}
-              </Text>
-            </div>
-            <Group gap="sm" align="center" wrap="nowrap">
+        {/* Compact sticky bar: title + scope switch + today jump (one row) */}
+        <div className={classes.stickyBar}>
+          <div className={classes.stickyBarInner}>
+            <Text fw={700} size="lg" className={classes.pageTitle}>
+              마감 캘린더
+            </Text>
+            <div className={classes.stickyActions}>
               {hasPast && (
                 <Button
                   variant="subtle"
@@ -419,13 +473,19 @@ export function CalendarClient() {
                 deptCount={deptCount}
                 campusCount={campusCount}
               />
-            </Group>
-          </Group>
+            </div>
+          </div>
+        </div>
 
-          {/* Weekly summary (inline, computed from loaded data) */}
+        {/* Date range + summary scroll away */}
+        <div className={classes.titleSection}>
+          <Text size="xs" c="dimmed" className={classes.dateRange}>
+            {window.from.format("YYYY.MM.DD")} ~{" "}
+            {window.to.format("YYYY.MM.DD")}
+          </Text>
           {weeklySummary && (
             <Text size="xs" c="dimmed" className={classes.weeklySummary}>
-              이번 주 마감 {weeklySummary.total}건
+              앞으로 7일 마감 {weeklySummary.total}건
               {selectionActive && weeklySummary.deptTotal > 0
                 ? ` · 내 학과 ${weeklySummary.deptTotal}건`
                 : ""}
@@ -433,10 +493,10 @@ export function CalendarClient() {
           )}
         </div>
 
-        {/* Desktop: filters always visible.
-            Mobile: compact collapsible region with filters + mini calendar */}
+        {/* Desktop: filters always visible */}
         <div className={classes.desktopFilters}>{filterBarEl}</div>
 
+        {/* Mobile: collapsible filters + calendar (closed by default) */}
         <div className={classes.mobileControls}>
           <button
             type="button"
@@ -458,17 +518,13 @@ export function CalendarClient() {
           {controlsOpen && (
             <div className={classes.mobileControlsContent}>
               {filterBarEl}
-              <MiniCalendar
-                dayMetaMap={dayMetaMap}
-                onDayClick={handleDayClick}
-                activeDateStr={null}
-                showDeptMarker={activeScope === "all" && selectionActive}
-              />
+              {miniCalendarEl}
+              {legendEl}
             </div>
           )}
         </div>
 
-        {/* Main layout: agenda + side panel */}
+        {/* Main layout: agenda + side panel (desktop only) */}
         <div className={classes.layout}>
           <div className={classes.agendaCol}>
             <AgendaView
@@ -491,32 +547,16 @@ export function CalendarClient() {
               activeScope={activeScope}
               hasDepts={selectionActive}
               onSwitchScope={setScope}
+              pastLoadToken={pastLoadToken}
+              filterKey={`${activeScope}:${prefs.hidden_categories.join(",")}:${prefs.favorites_only ? "1" : "0"}`}
+              showDeptMarkerPerRow={showDeptMarkerPerRow}
             />
           </div>
 
+          {/* Desktop aside: single mini calendar instance */}
           <aside className={classes.sideCol}>
-            <MiniCalendar
-              dayMetaMap={dayMetaMap}
-              onDayClick={handleDayClick}
-              activeDateStr={null}
-              showDeptMarker={activeScope === "all" && selectionActive}
-            />
-            {activeScope === "all" && selectionActive && (
-              <div className={classes.legend}>
-                <span className={classes.legendItem}>
-                  <span className={classes.legendRing} />
-                  <Text size="xs" c="dimmed">
-                    테두리 = 내 학과 마감일
-                  </Text>
-                </span>
-                <span className={classes.legendItem}>
-                  <IconBuilding size={12} className={classes.legendIcon} />
-                  <Text size="xs" c="dimmed">
-                    내 학과 공지가 위에 표시
-                  </Text>
-                </span>
-              </div>
-            )}
+            {miniCalendarEl}
+            {legendEl}
           </aside>
         </div>
       </Stack>

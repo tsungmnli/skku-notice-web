@@ -96,7 +96,7 @@ jobs:
             sleep 2
           done
           # 모든 화면이 열리는지
-          for p in / /favorites /calendar /login /signup /forgot-password /reset-password /verify-email /account /terms /policy; do
+          for p in / /favorites /calendar /login /signup /forgot-password /reset-password /verify-email /account /dept /dept/edit /terms /policy; do
             curl -fsS -o /dev/null "http://localhost:3000${p}"
           done
           # API 주소가 번들에 박혀 있는지 (빠지면 브라우저가 localhost 로 요청을 보낸다)

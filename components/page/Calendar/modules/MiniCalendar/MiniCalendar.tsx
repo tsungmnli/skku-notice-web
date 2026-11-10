@@ -149,7 +149,7 @@ export function MiniCalendar({
           if (hasItems) {
             ariaParts.push(`마감 ${meta!.count}건`);
             if (showDeptMarker) {
-              if (deptN > 0) ariaParts.push(`학과 ${deptN}건`);
+              if (deptN > 0) ariaParts.push(`내 학과 ${deptN}건`);
               if (campusN > 0) ariaParts.push(`학교 ${campusN}건`);
             }
           } else {
@@ -165,11 +165,13 @@ export function MiniCalendar({
               data-weekend={isWeekend || undefined}
               data-active={isActive || undefined}
               data-has-items={hasItems || undefined}
-              data-has-dept={hasDept || undefined}
               onClick={() => handleDayClick(dateStr)}
               aria-label={ariaParts.join(", ")}
               aria-pressed={isActive}
             >
+              {hasDept && (
+                <span className={classes.deptMarker} aria-hidden="true" />
+              )}
               <span className={classes.dayNumber}>{day.date()}</span>
               {hasItems && (
                 <span className={classes.dots} aria-hidden="true">

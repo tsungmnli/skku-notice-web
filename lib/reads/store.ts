@@ -390,6 +390,29 @@ export function getLocalReadsForUpload(): ReadRecord[] {
   }));
 }
 
-export function clearLocalReadsAfterMerge(): void {
-  clearLocalReads();
+/**
+ * 서버에 올라간 항목만 로컬에서 지운다. 업로드에 실패한 항목은 남겨 두어
+ * 일시적 오류에도 읽음 기록이 사라지지 않고, 다음 로그인 때 다시 올린다.
+ * 업로드하는 사이에 다시 읽어 read_at 이 바뀐 항목도 남긴다.
+ */
+export function clearLocalReadsAfterMerge(uploaded: ReadRecord[]): void {
+  if (typeof window === "undefined" || uploaded.length === 0) return;
+  const reads = readLocalReads();
+  const next: Record<number, string> = {};
+  let changed = false;
+  for (const [id, readAt] of Object.entries(reads)) {
+    next[Number(id)] = readAt;
+  }
+  for (const item of uploaded) {
+    if (next[item.article_id] === item.read_at) {
+      delete next[item.article_id];
+      changed = true;
+    }
+  }
+  if (!changed) return;
+  if (Object.keys(next).length === 0) {
+    clearLocalReads();
+  } else {
+    writeLocalReads(next);
+  }
 }

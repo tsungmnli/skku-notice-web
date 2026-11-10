@@ -40,6 +40,7 @@
   --container-px: 16px;
   --header-h: 56px;
   --bottom-nav-h: 64px;
+  --calendar-sticky-h: 40px;
 
   /* Semantic color tokens */
   --app-bg: #f7f9f8;

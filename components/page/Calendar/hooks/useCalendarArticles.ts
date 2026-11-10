@@ -85,6 +85,7 @@ export function useCalendarArticles(
     campusError: null,
   });
   const reqKeyRef = useRef("");
+  const [pastLoadToken, setPastLoadToken] = useState(0);
 
   // Build a stable string key from the scope so the effect re-fires when it changes
   const scopeKey = useMemo(() => {
@@ -226,6 +227,7 @@ export function useCalendarArticles(
   }, []);
 
   const loadPast = useCallback(() => {
+    setPastLoadToken((t) => t + 1);
     setWindow((prev) => ({
       from: prev.from.subtract(EXTEND_DAYS, "day"),
       to: prev.to,
@@ -259,5 +261,6 @@ export function useCalendarArticles(
     jumpToDate,
     backToToday,
     hasPast,
+    pastLoadToken,
   };
 }

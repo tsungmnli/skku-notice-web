@@ -6,10 +6,48 @@
   font-weight: 700;
 }
 
-.control:focus-within {
+.control:focus-visible {
   outline: 2px solid var(--accent-green);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
+}
+
+.control :focus:not(:focus-visible) {
+  outline: none;
+}
+
+.noDeptWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.addDeptLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.addDeptLink:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.addDeptLink:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: -2px;
 }
 
 @media (max-width: 35.99em) {

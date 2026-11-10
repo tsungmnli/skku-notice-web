@@ -211,15 +211,10 @@ function AgendaRow({
           <Text size="xs" c="dimmed" className={classes.writer}>
             {article.writer}
           </Text>
-          {isDept && showDeptMarker && (
+          {isDept && showDeptMarker && article.department_name && (
             <span className={classes.deptBadge}>
-              <IconBuilding size={11} className={classes.deptBadgeIcon} />내
-              학과
-              {article.department_name && (
-                <span className={classes.deptBadgeName}>
-                  · {article.department_name}
-                </span>
-              )}
+              <IconBuilding size={11} className={classes.deptBadgeIcon} />
+              {article.department_name}
             </span>
           )}
         </Group>
@@ -251,6 +246,9 @@ type Props = {
   activeScope?: ScopeFilter;
   hasDepts?: boolean;
   onSwitchScope?: (scope: ScopeFilter) => void;
+  pastLoadToken?: number;
+  filterKey?: string;
+  showDeptMarkerPerRow?: boolean;
 };
 
 export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
@@ -273,13 +271,17 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
     activeScope,
     hasDepts,
     onSwitchScope,
+    pastLoadToken,
+    filterKey,
+    showDeptMarkerPerRow,
   },
   ref,
 ) {
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
   const internalRef = useRef<HTMLDivElement>(null);
   const prevHeightRef = useRef(0);
-  const firstDateRef = useRef<string | null>(null);
+  const lastPastTokenRef = useRef<number | undefined>(pastLoadToken);
+  const lastFilterKeyRef = useRef<string | undefined>(filterKey);
 
   const toggleCollapse = useCallback((dateStr: string) => {
     setCollapsedDays((prev) => {
@@ -302,22 +304,50 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
 
   const groups = buildDayGroups(articles, deptIdSet, activeScope === "all");
 
-  // Preserve scroll position when items are prepended (loadPast)
+  // A1: Preserve scroll position only when load-past extends the window.
+  // On scope/filter changes, only scroll up to the top of the agenda when the
+  // user is already scrolled into the list; otherwise leave the page alone.
   useLayoutEffect(() => {
     const el = internalRef.current;
     if (!el) return;
-    const newFirst = groups[0]?.dateStr ?? null;
+
     if (
-      firstDateRef.current &&
-      newFirst &&
-      newFirst < firstDateRef.current &&
+      filterKey !== undefined &&
+      filterKey !== lastFilterKeyRef.current
+    ) {
+      lastFilterKeyRef.current = filterKey;
+      lastPastTokenRef.current = pastLoadToken;
+      prevHeightRef.current = el.scrollHeight;
+      const stickyH = typeof window !== "undefined"
+        ? parseFloat(
+            getComputedStyle(document.documentElement)
+              .getPropertyValue("--calendar-sticky-h")
+              .trim(),
+          ) || 40
+        : 40;
+      const offset = var_headerH() + stickyH + 8;
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      // 목록 안으로 스크롤해 내려온 경우에만 목록 맨 위로 올린다.
+      // 아직 목록 위쪽(제목/필터 영역)을 보고 있다면 화면을 움직이지 않는다.
+      if (window.scrollY > top) {
+        window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+      }
+      return;
+    }
+
+    if (
+      pastLoadToken !== undefined &&
+      pastLoadToken !== lastPastTokenRef.current &&
       prevHeightRef.current > 0
     ) {
+      lastPastTokenRef.current = pastLoadToken;
       const heightDiff = el.scrollHeight - prevHeightRef.current;
       if (heightDiff > 0) window.scrollBy(0, heightDiff);
+      prevHeightRef.current = el.scrollHeight;
+      return;
     }
+
     prevHeightRef.current = el.scrollHeight;
-    firstDateRef.current = newFirst;
   });
 
   if (loading && articles.length === 0) {
@@ -480,6 +510,13 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
           visibleArticles = group.articles;
         }
 
+        // B5: split count in "모두" view
+        const showSplit =
+          activeScope === "all" &&
+          deptIdSet &&
+          deptItems.length > 0 &&
+          campusItems.length > 0;
+
         return (
           <section
             key={group.dateStr}
@@ -503,7 +540,17 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
               </Group>
               <Group gap="xs" align="center" wrap="nowrap">
                 <Text size="xs" c="dimmed" className={classes.dayCount}>
-                  {group.articles.length}건
+                  {showSplit ? (
+                    <>
+                      <span className={classes.deptCountText}>
+                        내 학과 {deptItems.length}
+                      </span>
+                      {" · "}
+                      <span>학교 {campusItems.length}</span>
+                    </>
+                  ) : (
+                    `${group.articles.length}건`
+                  )}
                 </Text>
                 {isLarge && (
                   <ActionIcon
@@ -524,19 +571,44 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
               </Group>
             </div>
             <Stack gap={0}>
-              {visibleArticles.map((article) => (
-                <AgendaRow
-                  key={article.id}
-                  article={article}
-                  isFavorite={isFavorite(article.id)}
-                  onToggleFavorite={onToggleFavorite}
-                  isPast={isPast}
-                  isDept={deptIdSet?.has(article.id)}
-                  showDeptMarker={activeScope === "all"}
-                  isToday={isToday}
-                  isTomorrow={isTomorrow}
-                />
-              ))}
+              {showSplit && deptItems.length > 0 && (
+                <div className={classes.subGroupLabel}>
+                  <IconBuilding
+                    size={10}
+                    className={classes.subGroupIcon}
+                  />
+                  <span>내 학과</span>
+                </div>
+              )}
+              {(() => {
+                const firstCampusIdx = showSplit
+                  ? visibleArticles.findIndex((a) => !deptIdSet?.has(a.id))
+                  : -1;
+                return visibleArticles.map((article, idx) => {
+                  const isDeptItem = deptIdSet?.has(article.id);
+                  const showDivider = showSplit && idx === firstCampusIdx;
+
+                  return (
+                    <div key={article.id}>
+                      {showDivider && (
+                        <div className={classes.deptCampusDivider}>
+                          <span>학교 공지</span>
+                        </div>
+                      )}
+                      <AgendaRow
+                        article={article}
+                        isFavorite={isFavorite(article.id)}
+                        onToggleFavorite={onToggleFavorite}
+                        isPast={isPast}
+                        isDept={isDeptItem}
+                        showDeptMarker={showDeptMarkerPerRow}
+                        isToday={isToday}
+                        isTomorrow={isTomorrow}
+                      />
+                    </div>
+                  );
+                });
+              })()}
               {hiddenCount > 0 && (
                 <button
                   type="button"
@@ -581,3 +653,11 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
     </div>
   );
 });
+
+function var_headerH(): number {
+  if (typeof window === "undefined") return 56;
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue("--header-h")
+    .trim();
+  return parseFloat(v) || 56;
+}
