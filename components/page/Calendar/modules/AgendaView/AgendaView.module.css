@@ -74,15 +74,6 @@
   opacity: 0.6;
 }
 
-.dayHeader[data-today] {
-  background: var(--skku-green-0);
-  border-bottom-color: var(--accent-green);
-}
-
-html[data-mantine-color-scheme="dark"] .dayHeader[data-today] {
-  background: rgba(62, 156, 124, 0.12);
-}
-
 .dayLabel {
   line-height: 1.3;
 }
@@ -101,53 +92,22 @@ html[data-mantine-color-scheme="dark"] .deptCountText {
   color: var(--mantine-color-skku-green-4);
 }
 
-/* B5: sub-group labels and divider */
-.subGroupLabel {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px var(--sp-3) 2px;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--mantine-color-skku-green-6);
-  background: var(--surface-hover);
-}
-
-html[data-mantine-color-scheme="dark"] .subGroupLabel {
-  color: var(--mantine-color-skku-green-4);
-}
-
-.subGroupIcon {
+/* 날짜 헤더의 D-day: 채움 없이 텍스트 색만 사용. 3일 이내만 빨강. */
+.dayD {
   flex-shrink: 0;
-}
-
-.deptCampusDivider {
-  display: flex;
-  align-items: center;
-  padding: 3px var(--sp-3);
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--text-muted);
-  border-top: 1px dashed var(--surface-border-strong);
-  border-bottom: 1px dashed var(--surface-border-strong);
-  background: var(--surface-card);
-}
-
-.todayTag {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 8px;
-  border-radius: var(--radius-sm);
-  background: var(--accent-green);
-  color: #fff;
+  white-space: nowrap;
   font-size: var(--fs-caption);
   font-weight: 700;
-  white-space: nowrap;
-  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
 }
 
-html[data-mantine-color-scheme="dark"] .todayTag {
-  color: #10251b;
+.dayD[data-urgent] {
+  color: #dc2626;
+}
+
+html[data-mantine-color-scheme="dark"] .dayD[data-urgent] {
+  color: #f87171;
 }
 
 .collapseBtn {
@@ -179,23 +139,6 @@ html[data-mantine-color-scheme="dark"] .todayTag {
 
 .row[data-past] {
   opacity: 0.5;
-}
-
-/* Today/tomorrow urgency treatment */
-.row[data-urgent] {
-  background: rgba(220, 38, 38, 0.04);
-}
-
-.row[data-urgent]:hover {
-  background: rgba(220, 38, 38, 0.08);
-}
-
-html[data-mantine-color-scheme="dark"] .row[data-urgent] {
-  background: rgba(220, 38, 38, 0.1);
-}
-
-html[data-mantine-color-scheme="dark"] .row[data-urgent]:hover {
-  background: rgba(220, 38, 38, 0.15);
 }
 
 .starBtn {
@@ -251,33 +194,6 @@ html[data-mantine-color-scheme="dark"] .row[data-urgent]:hover {
 .time {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 8px;
-  border-radius: var(--radius-sm);
-  font-size: var(--fs-caption);
-  font-weight: 700;
-  white-space: nowrap;
-  background: var(--surface-hover);
-  color: var(--text-secondary);
-}
-
-.pillUrgent {
-  background: #dc2626;
-  color: #fff;
-}
-
-.pillSoon {
-  background: #d28a23;
-  color: #fff;
-}
-
-.pillPassed {
-  background: transparent;
-  color: var(--text-muted);
 }
 
 .catTag {

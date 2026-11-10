@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActionIcon, Button, Group, Text } from "@mantine/core";
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import {
+  IconBuilding,
+  IconChevronLeft,
+  IconChevronRight,
+} from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { todayInSeoul } from "@/utils/date";
 import { categoryColor } from "@/lib/calendar/categories";
@@ -139,6 +143,7 @@ export function MiniCalendar({
           const isToday = day.isSame(today, "day");
           const isWeekend = day.day() === 0 || day.day() === 6;
           const isActive = activeDateStr === dateStr;
+          const isPast = day.isBefore(today, "day");
           const hasItems = meta && meta.count > 0;
           const dots = (meta?.categories ?? []).slice(0, 3);
           const hasDept = showDeptMarker && (meta?.deptCount ?? 0) > 0;
@@ -162,6 +167,7 @@ export function MiniCalendar({
               className={classes.dayCell}
               data-date={dateStr}
               data-today={isToday || undefined}
+              data-past={isPast || undefined}
               data-weekend={isWeekend || undefined}
               data-active={isActive || undefined}
               data-has-items={hasItems || undefined}
@@ -170,7 +176,9 @@ export function MiniCalendar({
               aria-pressed={isActive}
             >
               {hasDept && (
-                <span className={classes.deptMarker} aria-hidden="true" />
+                <span className={classes.deptMarker} aria-hidden="true">
+                  <IconBuilding size={10} stroke={2.2} />
+                </span>
               )}
               <span className={classes.dayNumber}>{day.date()}</span>
               {hasItems && (
@@ -182,8 +190,8 @@ export function MiniCalendar({
                       style={{ background: categoryColor(cat) }}
                     />
                   ))}
-                  {meta!.count > 3 && (
-                    <span className={classes.dotMore}>+{meta!.count - 3}</span>
+                  {meta!.count > dots.length && (
+                    <span className={classes.dotMore}>{meta!.count}</span>
                   )}
                 </span>
               )}

@@ -34,10 +34,6 @@
   font-weight: 700;
 }
 
-.weekdayCell[data-weekend] {
-  color: var(--accent-green);
-}
-
 .dayCell,
 .emptyCell {
   min-height: 44px;
@@ -61,6 +57,11 @@
 .dayCell:nth-child(7n),
 .emptyCell:nth-child(7n) {
   border-right: 0;
+}
+
+/* 지난 날짜는 흐리게 */
+.dayCell[data-past] {
+  opacity: 0.5;
 }
 
 .dayCell:hover {
@@ -129,20 +130,19 @@ html[data-mantine-color-scheme="dark"] .dayCell[data-today] .dayNumber {
   line-height: 1;
 }
 
-/* B6: lighter department marker — small corner dot, not a border/outline */
+/* 내 학과 마감 마커: 목록의 학과 칩·범위 탭과 같은 건물 아이콘(초록).
+   모양이 곧 설명이라 별도 범례가 필요 없다. */
 .deptMarker {
   position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--mantine-color-skku-green-6);
-  flex-shrink: 0;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  line-height: 0;
+  color: var(--mantine-color-skku-green-6);
 }
 
 html[data-mantine-color-scheme="dark"] .deptMarker {
-  background: var(--mantine-color-skku-green-4);
+  color: var(--mantine-color-skku-green-4);
 }
 
 @media (max-width: 63.99em) {

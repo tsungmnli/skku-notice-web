@@ -21,7 +21,7 @@ import {
 import type { ScopeFilter } from "../ScopeSwitch";
 import dayjs from "dayjs";
 import type { Article } from "@/lib/api/types";
-import { SEOUL_TZ, computeDDay, parseSeoul } from "@/utils/date";
+import { SEOUL_TZ, parseSeoul } from "@/utils/date";
 import { categoryColor } from "@/lib/calendar/categories";
 import { categoryLabel } from "@/utils/constants";
 import classes from "./AgendaView.module.css";
@@ -97,26 +97,16 @@ function buildDayGroups(
   return groups;
 }
 
-function DeadlinePill({ deadlineAt }: { deadlineAt: string }) {
-  const info = computeDDay(deadlineAt);
-  if (!info) return null;
-
-  let className = classes.pill;
-  let style: React.CSSProperties = {};
-
-  if (info.passed) {
-    className = `${classes.pill} ${classes.pillPassed}`;
-  } else if (info.days <= 3) {
-    className = `${classes.pill} ${classes.pillUrgent}`;
-    style = { background: "#dc2626", color: "#fff" };
-  } else if (info.days <= 7) {
-    className = `${classes.pill} ${classes.pillSoon}`;
-    style = { background: "#d28a23", color: "#fff" };
-  }
-
+/** 날짜 헤더용 D-day. 긴급도는 행마다 반복하지 않고 헤더에서 한 번만 보여준다. */
+function DayDLabel({ dateStr, todayStr }: { dateStr: string; todayStr: string }) {
+  const diff = dayjs
+    .tz(dateStr, SEOUL_TZ)
+    .startOf("day")
+    .diff(dayjs.tz(todayStr, SEOUL_TZ).startOf("day"), "day");
+  if (diff < 0) return null;
   return (
-    <span className={className} style={style}>
-      {info.label}
+    <span className={classes.dayD} data-urgent={diff <= 3 || undefined}>
+      {diff === 0 ? "D-day" : `D-${diff}`}
     </span>
   );
 }
@@ -128,8 +118,6 @@ type RowProps = {
   isPast: boolean;
   isDept?: boolean;
   showDeptMarker?: boolean;
-  isToday?: boolean;
-  isTomorrow?: boolean;
 };
 
 function AgendaRow({
@@ -139,8 +127,6 @@ function AgendaRow({
   isPast,
   isDept,
   showDeptMarker,
-  isToday,
-  isTomorrow,
 }: RowProps) {
   const time = article.deadline_at
     ? (() => {
@@ -151,14 +137,18 @@ function AgendaRow({
     : null;
 
   const primaryCat = article.categories[0] ?? "general";
+  const showDeptChip = Boolean(
+    isDept && showDeptMarker && article.department_name,
+  );
+  // 작성자가 학과 칩과 같은 이름이면 같은 말을 두 번 하지 않는다.
+  const showWriter = !(
+    showDeptChip && article.writer === article.department_name
+  );
 
   return (
     <article
       className={classes.row}
       data-past={isPast || undefined}
-      data-today={isToday || undefined}
-      data-tomorrow={isTomorrow || undefined}
-      data-urgent={isToday || isTomorrow || undefined}
       style={{ borderLeftColor: categoryColor(primaryCat) }}
     >
       <ActionIcon
@@ -190,10 +180,9 @@ function AgendaRow({
         <Group gap="xs" align="center" wrap="wrap" className={classes.meta}>
           {time && (
             <Text size="xs" c="dimmed" className={classes.time}>
-              {time}
+              {time} 마감
             </Text>
           )}
-          <DeadlinePill deadlineAt={article.deadline_at!} />
           <Group gap={4} wrap="nowrap">
             {article.categories.slice(0, 2).map((code) => (
               <span
@@ -208,11 +197,13 @@ function AgendaRow({
               </span>
             ))}
           </Group>
-          <Text size="xs" c="dimmed" className={classes.writer}>
-            {article.writer}
-          </Text>
-          {isDept && showDeptMarker && article.department_name && (
-            <span className={classes.deptBadge}>
+          {showWriter && (
+            <Text size="xs" c="dimmed" className={classes.writer}>
+              {article.writer}
+            </Text>
+          )}
+          {showDeptChip && (
+            <span className={classes.deptBadge} title={article.department_name}>
               <IconBuilding size={11} className={classes.deptBadgeIcon} />
               {article.department_name}
             </span>
@@ -440,11 +431,6 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
     );
   }
 
-  const tomorrowStr = dayjs
-    .tz(todayStr, SEOUL_TZ)
-    .add(1, "day")
-    .format("YYYY-MM-DD");
-
   return (
     <div ref={setRef} className={classes.agenda}>
       {scopeNotice}
@@ -483,7 +469,6 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
       {groups.map((group) => {
         const isPast = group.dateStr < todayStr;
         const isToday = group.dateStr === todayStr;
-        const isTomorrow = group.dateStr === tomorrowStr;
         const isLarge = group.articles.length > COLLAPSE_THRESHOLD;
         const collapsed = collapsedDays.has(group.dateStr);
 
@@ -499,7 +484,13 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
         let visibleArticles: Article[];
         let hiddenCount = 0;
         if (isLarge && collapsed) {
-          if (activeScope === "all" && deptItems.length > 0) {
+          // 내 학과 공지는 접어도 남기되, 접어서 숨길 학교 공지가 있을 때만 그렇게 한다.
+          // (전부 내 학과 공지인 날에 deptItems를 그대로 보여주면 접어도 달라지는 게 없다.)
+          if (
+            activeScope === "all" &&
+            deptItems.length > 0 &&
+            campusItems.length > 0
+          ) {
             visibleArticles = deptItems;
             hiddenCount = campusItems.length;
           } else {
@@ -532,24 +523,18 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
                 <Text size="sm" fw={700} className={classes.dayLabel}>
                   {group.label}
                 </Text>
-                {isToday && (
-                  <span className={classes.todayTag} aria-label="오늘">
-                    오늘
-                  </span>
-                )}
+                <DayDLabel dateStr={group.dateStr} todayStr={todayStr} />
               </Group>
               <Group gap="xs" align="center" wrap="nowrap">
                 <Text size="xs" c="dimmed" className={classes.dayCount}>
-                  {showSplit ? (
+                  {group.articles.length}건
+                  {showSplit && (
                     <>
+                      {" · "}
                       <span className={classes.deptCountText}>
                         내 학과 {deptItems.length}
                       </span>
-                      {" · "}
-                      <span>학교 {campusItems.length}</span>
                     </>
-                  ) : (
-                    `${group.articles.length}건`
                   )}
                 </Text>
                 {isLarge && (
@@ -571,44 +556,17 @@ export const AgendaView = forwardRef<HTMLDivElement, Props>(function AgendaView(
               </Group>
             </div>
             <Stack gap={0}>
-              {showSplit && deptItems.length > 0 && (
-                <div className={classes.subGroupLabel}>
-                  <IconBuilding
-                    size={10}
-                    className={classes.subGroupIcon}
-                  />
-                  <span>내 학과</span>
-                </div>
-              )}
-              {(() => {
-                const firstCampusIdx = showSplit
-                  ? visibleArticles.findIndex((a) => !deptIdSet?.has(a.id))
-                  : -1;
-                return visibleArticles.map((article, idx) => {
-                  const isDeptItem = deptIdSet?.has(article.id);
-                  const showDivider = showSplit && idx === firstCampusIdx;
-
-                  return (
-                    <div key={article.id}>
-                      {showDivider && (
-                        <div className={classes.deptCampusDivider}>
-                          <span>학교 공지</span>
-                        </div>
-                      )}
-                      <AgendaRow
-                        article={article}
-                        isFavorite={isFavorite(article.id)}
-                        onToggleFavorite={onToggleFavorite}
-                        isPast={isPast}
-                        isDept={isDeptItem}
-                        showDeptMarker={showDeptMarkerPerRow}
-                        isToday={isToday}
-                        isTomorrow={isTomorrow}
-                      />
-                    </div>
-                  );
-                });
-              })()}
+              {visibleArticles.map((article) => (
+                <AgendaRow
+                  key={article.id}
+                  article={article}
+                  isFavorite={isFavorite(article.id)}
+                  onToggleFavorite={onToggleFavorite}
+                  isPast={isPast}
+                  isDept={deptIdSet?.has(article.id)}
+                  showDeptMarker={showDeptMarkerPerRow}
+                />
+              ))}
               {hiddenCount > 0 && (
                 <button
                   type="button"

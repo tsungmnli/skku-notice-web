@@ -30,11 +30,57 @@
   text-overflow: ellipsis;
 }
 
+/* 상단 요약: 가장 쓸모 있는 정보라 본문 크기로 키우고, 눌러서 이동할 수 있다 */
 .weeklySummary {
-  padding-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+  padding-bottom: 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.summaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.summaryBtn strong {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryBtn:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.summaryBtn:focus-visible {
+  outline: 2px solid var(--accent-green);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.summarySep {
+  color: var(--text-muted);
+}
+
+.summaryIcon {
+  color: var(--mantine-color-skku-green-6);
+  flex-shrink: 0;
+}
+
+html[data-mantine-color-scheme="dark"] .summaryIcon {
+  color: var(--mantine-color-skku-green-4);
 }
 
 /* Compact sticky bar: title + scope switch + today jump */
@@ -165,40 +211,11 @@
   color: var(--mantine-color-gray-4);
 }
 
-.legend {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  padding: var(--sp-2) var(--sp-3);
-  margin-top: var(--sp-2);
-}
-
-.legendItem {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legendDot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mantine-color-skku-green-6);
-  flex-shrink: 0;
-}
-
-html[data-mantine-color-scheme="dark"] .legendDot {
-  background: var(--mantine-color-skku-green-4);
-}
-
-.legendIcon {
-  color: var(--mantine-color-skku-green-6);
-  flex-shrink: 0;
-}
-
-html[data-mantine-color-scheme="dark"] .legendIcon {
-  color: var(--mantine-color-skku-green-4);
+.filterActive {
+  margin-left: var(--sp-2);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  color: var(--accent-green);
 }
 
 @media (max-width: 35.99em) {

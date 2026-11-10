@@ -46,11 +46,10 @@ export type DDayInfo = {
   label: string;
 };
 
-/** Compute D-day in Asia/Seoul. If time is 23:59, treat as date-only ("당일 마감"). */
+/** Compute D-day in Asia/Seoul. 당일은 마감 시간 유무와 상관없이 항상 "D-day". */
 export function computeDDay(deadlineAt: string | null): DDayInfo | null {
   if (!deadlineAt) return null;
   const dl = parseSeoul(deadlineAt);
-  const timeUnknown = isTimeUnknown(deadlineAt, dl);
 
   const now = dayjs.tz(new Date(), SEOUL_TZ);
   const today = now.startOf("day");
@@ -61,7 +60,7 @@ export function computeDDay(deadlineAt: string | null): DDayInfo | null {
   if (diff > 0) {
     label = `D-${diff}`;
   } else if (diff === 0) {
-    label = timeUnknown ? "당일 마감" : "D-day";
+    label = "D-day";
   } else {
     label = `D+${Math.abs(diff)}`;
   }

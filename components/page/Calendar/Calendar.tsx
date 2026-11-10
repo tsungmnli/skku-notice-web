@@ -148,8 +148,8 @@ export function CalendarClient() {
   }, [filteredArticles, deptIdSet]);
 
   // Weekly summary: next 7 days including today.
-  // Total reflects category/favorite filters; dept figure is independent of
-  // category/favorite filters (computed from scope-filtered articles only).
+  // 합계와 내 학과 수 모두 현재 필터(카테고리/즐겨찾기)를 반영한다.
+  // 눌러서 이동했을 때 목록 건수와 어긋나지 않게 하기 위해서다.
   const weeklySummary = useMemo(() => {
     if (!hydrated || loading) return null;
     const today = todayInSeoul().startOf("day");
@@ -161,26 +161,11 @@ export function CalendarClient() {
       const d = parseSeoul(a.deadline_at).startOf("day");
       if (d.isBefore(today) || d.isAfter(weekEnd)) continue;
       total++;
+      if (deptIdSet.has(a.id)) deptTotal++;
     }
-    // Dept figure: from scopeFiltered, ignoring category/favorite filters
-    if (selectionActive) {
-      for (const a of scopeFiltered) {
-        if (!a.deadline_at) continue;
-        const d = parseSeoul(a.deadline_at).startOf("day");
-        if (d.isBefore(today) || d.isAfter(weekEnd)) continue;
-        if (deptIdSet.has(a.id)) deptTotal++;
-      }
-    }
-    if (total === 0 && deptTotal === 0) return null;
+    if (total === 0) return null;
     return { total, deptTotal };
-  }, [
-    filteredArticles,
-    scopeFiltered,
-    deptIdSet,
-    selectionActive,
-    hydrated,
-    loading,
-  ]);
+  }, [filteredArticles, deptIdSet, hydrated, loading]);
 
   const allFilteredOut =
     hydrated &&
@@ -195,27 +180,38 @@ export function CalendarClient() {
     !(activeScope === "dept" && !selectionActive);
 
   // Handlers
+  // 저장 형식(hidden_categories)은 그대로 두고 동작만 "아무것도 안 고르면 전체"로 바꾼다.
+  // - 전체 상태에서 칩을 누르면: 그 카테고리만 보기
+  // - 필터 중에 칩을 누르면: 그 카테고리를 추가/제거
+  // - 결과가 전부 선택이거나 아무것도 선택 안 됨이면: 전체로 복귀
   const handleToggleCategory = useCallback(
     (code: string) => {
       const hidden = prefs.hidden_categories;
+      if (hidden.length === 0) {
+        update({
+          hidden_categories: CATEGORY_CODES.filter((c) => c !== code),
+        });
+        return;
+      }
       const next = hidden.includes(code)
         ? hidden.filter((c) => c !== code)
         : [...hidden, code];
-      update({ hidden_categories: next });
+      const present = CATEGORY_CODES.filter(
+        (c) => (categoryCounts[c] ?? 0) > 0,
+      );
+      const selectedCount = present.filter((c) => !next.includes(c)).length;
+      const reset = selectedCount === 0 || selectedCount === present.length;
+      update({ hidden_categories: reset ? [] : next });
     },
-    [prefs.hidden_categories, update],
+    [prefs.hidden_categories, categoryCounts, update],
   );
 
   const handleToggleFavoritesOnly = useCallback(() => {
     update({ favorites_only: !prefs.favorites_only });
   }, [prefs.favorites_only, update]);
 
-  const handleAllOn = useCallback(() => {
+  const handleClearCategories = useCallback(() => {
     update({ hidden_categories: [] });
-  }, [update]);
-
-  const handleAllOff = useCallback(() => {
-    update({ hidden_categories: [...CATEGORY_CODES] });
   }, [update]);
 
   const handleDayClick = useCallback(
@@ -345,11 +341,11 @@ export function CalendarClient() {
               favoritesOnly={prefs.favorites_only}
               hiddenCategories={prefs.hidden_categories}
               counts={categoryCounts}
+              totalCount={scopeFiltered.length}
               favoritesCount={favoritesCount}
               onToggleFavoritesOnly={handleToggleFavoritesOnly}
               onToggleCategory={handleToggleCategory}
-              onAllOn={handleAllOn}
-              onAllOff={handleAllOff}
+              onClearCategories={handleClearCategories}
             />
           )}
 
@@ -411,11 +407,11 @@ export function CalendarClient() {
       favoritesOnly={prefs.favorites_only}
       hiddenCategories={prefs.hidden_categories}
       counts={categoryCounts}
+      totalCount={scopeFiltered.length}
       favoritesCount={favoritesCount}
       onToggleFavoritesOnly={handleToggleFavoritesOnly}
       onToggleCategory={handleToggleCategory}
-      onAllOn={handleAllOn}
-      onAllOff={handleAllOff}
+      onClearCategories={handleClearCategories}
     />
   ) : null;
 
@@ -428,23 +424,8 @@ export function CalendarClient() {
     />
   );
 
-  const legendEl =
-    activeScope === "all" && selectionActive ? (
-      <div className={classes.legend}>
-        <span className={classes.legendItem}>
-          <span className={classes.legendDot} />
-          <Text size="xs" c="dimmed">
-            점 = 내 학과 마감일
-          </Text>
-        </span>
-        <span className={classes.legendItem}>
-          <IconBuilding size={12} className={classes.legendIcon} />
-          <Text size="xs" c="dimmed">
-            내 학과 공지가 위에 표시
-          </Text>
-        </span>
-      </div>
-    ) : null;
+  const filtersActive =
+    prefs.hidden_categories.length > 0 || prefs.favorites_only;
 
   return (
     <div className={classes.pageContainer}>
@@ -477,20 +458,43 @@ export function CalendarClient() {
           </div>
         </div>
 
-        {/* Date range + summary scroll away */}
+        {/* Summary + date range scroll away */}
         <div className={classes.titleSection}>
+          {weeklySummary && (
+            <div className={classes.weeklySummary}>
+              <button
+                type="button"
+                className={classes.summaryBtn}
+                onClick={() => handleDayClick(todayStr)}
+              >
+                앞으로 7일 마감 <strong>{weeklySummary.total}건</strong>
+              </button>
+              {selectionActive &&
+                activeScope !== "dept" &&
+                weeklySummary.deptTotal > 0 && (
+                  <>
+                    <span className={classes.summarySep} aria-hidden="true">
+                      ·
+                    </span>
+                    <button
+                      type="button"
+                      className={classes.summaryBtn}
+                      onClick={() => setScope("dept")}
+                    >
+                      <IconBuilding
+                        size={14}
+                        className={classes.summaryIcon}
+                      />
+                      내 학과 <strong>{weeklySummary.deptTotal}건</strong>
+                    </button>
+                  </>
+                )}
+            </div>
+          )}
           <Text size="xs" c="dimmed" className={classes.dateRange}>
             {window.from.format("YYYY.MM.DD")} ~{" "}
             {window.to.format("YYYY.MM.DD")}
           </Text>
-          {weeklySummary && (
-            <Text size="xs" c="dimmed" className={classes.weeklySummary}>
-              앞으로 7일 마감 {weeklySummary.total}건
-              {selectionActive && weeklySummary.deptTotal > 0
-                ? ` · 내 학과 ${weeklySummary.deptTotal}건`
-                : ""}
-            </Text>
-          )}
         </div>
 
         {/* Desktop: filters always visible */}
@@ -506,6 +510,9 @@ export function CalendarClient() {
           >
             <span>
               {controlsOpen ? "필터 · 달력 접기" : "필터 · 달력 펼치기"}
+              {!controlsOpen && filtersActive && (
+                <span className={classes.filterActive}>필터 적용 중</span>
+              )}
             </span>
             <IconChevronDown
               size={16}
@@ -519,7 +526,6 @@ export function CalendarClient() {
             <div className={classes.mobileControlsContent}>
               {filterBarEl}
               {miniCalendarEl}
-              {legendEl}
             </div>
           )}
         </div>
@@ -556,7 +562,6 @@ export function CalendarClient() {
           {/* Desktop aside: single mini calendar instance */}
           <aside className={classes.sideCol}>
             {miniCalendarEl}
-            {legendEl}
           </aside>
         </div>
       </Stack>
