@@ -45,7 +45,7 @@
   gap: 6px;
   height: 30px;
   padding: 0 12px;
-  border: 1px solid var(--surface-border-strong);
+  border: 1px solid var(--cal-border-strong);
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--fs-xs);
@@ -106,7 +106,7 @@
 .divider {
   width: 1px;
   height: 20px;
-  background: var(--surface-border-strong);
+  background: var(--cal-border-strong);
   flex-shrink: 0;
 }
 

@@ -2,6 +2,19 @@
   max-width: var(--container-max);
   margin: 0 auto;
   padding: var(--sp-4) var(--container-px) var(--sp-7);
+
+  /* 다크 모드에서는 전역 --surface-border-strong이 --surface-border와 같은 값이라
+     칩/캘린더/토글 테두리가 배경에 묻힌다. 전역 토큰은 건드리지 않고
+     캘린더 범위에서만 한 단계 밝게 보정한다. */
+  --cal-border-strong: var(--surface-border-strong);
+}
+
+html[data-mantine-color-scheme="dark"] .pageContainer {
+  --cal-border-strong: color-mix(
+    in srgb,
+    var(--surface-border),
+    var(--text-muted) 18%
+  );
 }
 
 /* Title block scrolls away; only the compact switch bar is sticky */
@@ -124,7 +137,7 @@ html[data-mantine-color-scheme="dark"] .summaryIcon {
   justify-content: space-between;
   width: 100%;
   padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--surface-border-strong);
+  border: 1px solid var(--cal-border-strong);
   border-radius: var(--radius-md);
   background: var(--surface-card);
   color: var(--text-primary);

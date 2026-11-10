@@ -8,7 +8,7 @@ import {
   IconChevronRight,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
-import { todayInSeoul } from "@/utils/date";
+import { SEOUL_TZ, todayInSeoul } from "@/utils/date";
 import { categoryColor } from "@/lib/calendar/categories";
 import classes from "./MiniCalendar.module.css";
 
@@ -35,6 +35,16 @@ export function MiniCalendar({
   showDeptMarker,
 }: Props) {
   const [month, setMonth] = useState(() => todayInSeoul().startOf("month"));
+
+  // 목록이 다른 달의 날짜로 이동했을 때 활성 날짜가 보이도록 그 달로 넘긴다.
+  // (렌더 중 상태 보정 패턴: 활성 날짜가 바뀐 순간에만 한 번 실행된다.)
+  const [prevActiveDateStr, setPrevActiveDateStr] = useState(activeDateStr);
+  if (activeDateStr !== prevActiveDateStr) {
+    setPrevActiveDateStr(activeDateStr);
+    if (activeDateStr) {
+      setMonth(dayjs.tz(activeDateStr, SEOUL_TZ).startOf("month"));
+    }
+  }
   const gridRef = useRef<HTMLDivElement>(null);
 
   const today = todayInSeoul().startOf("day");

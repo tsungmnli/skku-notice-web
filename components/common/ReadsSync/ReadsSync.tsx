@@ -38,6 +38,13 @@ export function ReadsSync() {
     purgeOldLocalReads();
   }, []);
 
+  // 읽음 기준일 저장: 마운트 때와 가입일(created_at)이 확정/변경될 때.
+  // 예전에는 useReads가 렌더 중에 저장해서 "렌더 중 다른 컴포넌트 갱신" 경고가 났다.
+  const createdAt = user?.created_at ?? null;
+  useEffect(() => {
+    ensureBaseline(createdAt);
+  }, [createdAt]);
+
   // Handle auth state changes
   useEffect(() => {
     const prev = prevStatus.current;

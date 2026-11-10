@@ -124,6 +124,7 @@ html[data-mantine-color-scheme="dark"] .dayD[data-urgent] {
 }
 
 .row {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--sp-2);
@@ -141,9 +142,13 @@ html[data-mantine-color-scheme="dark"] .dayD[data-urgent] {
   opacity: 0.5;
 }
 
+/* 별 버튼: 아이콘 위치는 그대로 두고 터치 영역만 36px로 키운다(음수 마진으로 보정).
+   행 전체 링크(.titleLink::after) 위에 올라와야 해서 z-index를 준다. */
 .starBtn {
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin: -5px -7px -7px -7px;
 }
 
 .starBtn :focus:not(:focus-visible) {
@@ -179,6 +184,24 @@ html[data-mantine-color-scheme="dark"] .dayD[data-urgent] {
 
 .titleLink:hover .title {
   color: var(--accent-green);
+}
+
+/* 행 전체를 클릭 영역으로: 제목 링크의 ::after 가 행(.row, position: relative)을 덮는다.
+   칩/시간/작성자/여백을 눌러도 공지가 열리고, 별 버튼만 위(z-index)에서 따로 동작한다. */
+.titleLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+/* 행 전체가 링크이므로 키보드 포커스 링도 행 전체에 그린다 */
+.titleLink:focus-visible {
+  outline: none;
+}
+
+.titleLink:focus-visible::after {
+  outline: 2px solid var(--accent-green);
+  outline-offset: -2px;
 }
 
 .externalIcon {
@@ -268,9 +291,11 @@ html[data-mantine-color-scheme="dark"] .deptBadge {
   outline: none;
 }
 
+/* 모바일: 학과 이름을 자르지 않는다. 메타 줄(Group)이 줄바꿈되므로
+   길면 다음 줄로 내려가고, 한 줄보다 길 때만 말줄임표가 나온다. */
 @media (max-width: 30em) {
   .deptBadge {
-    max-width: 90px;
+    max-width: 100%;
   }
 }
 

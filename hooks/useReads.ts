@@ -7,7 +7,7 @@ import {
   getServerSnapshot,
   getRead,
   markRead as storeMarkRead,
-  ensureBaseline,
+  resolveBaseline,
 } from "@/lib/reads/store";
 import { windowStart, computeSince, badgeFor } from "@/lib/freshness";
 import { todayInSeoul } from "@/utils/date";
@@ -30,7 +30,8 @@ export function useReads() {
   const isAuthenticated = status === "authenticated";
 
   const since = useCallback((createdAt: string | null): string => {
-    const baseline = ensureBaseline(createdAt);
+    // 렌더 중 호출되므로 저장하지 않는 계산만 한다. 저장은 ReadsSync가 담당.
+    const baseline = resolveBaseline(createdAt);
     const ws = windowStart(todayInSeoul());
     return computeSince(ws, baseline);
   }, []);

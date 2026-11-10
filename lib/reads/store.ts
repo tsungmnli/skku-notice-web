@@ -189,29 +189,23 @@ export function setBaseline(date: string): void {
   }
 }
 
-export function ensureBaseline(userCreatedAt: string | null): string {
+/**
+ * 저장하지 않고 기준일만 계산한다. 렌더 중에 불러도 안전하다.
+ * (setBaseline은 이벤트를 발행해 다른 컴포넌트를 갱신하므로 렌더 중 호출하면 안 된다.)
+ */
+export function resolveBaseline(userCreatedAt: string | null): string {
   const stored = getBaseline();
-  if (!stored) {
-    let baseline: string;
-    if (userCreatedAt) {
-      baseline = userCreatedAt.slice(0, 10);
-    } else {
-      baseline = toSeoulDateStr(todayInSeoul());
-      setBaseline(baseline);
-    }
-    if (userCreatedAt) {
-      setBaseline(baseline);
-    }
-    return baseline;
-  }
-  if (userCreatedAt) {
-    const createdDate = userCreatedAt.slice(0, 10);
-    if (createdDate < stored) {
-      setBaseline(createdDate);
-      return createdDate;
-    }
-  }
+  const createdDate = userCreatedAt ? userCreatedAt.slice(0, 10) : null;
+  if (!stored) return createdDate ?? toSeoulDateStr(todayInSeoul());
+  if (createdDate && createdDate < stored) return createdDate;
   return stored;
+}
+
+/** 기준일을 계산하고 달라졌으면 저장한다. 렌더 중이 아니라 effect/핸들러에서 부른다. */
+export function ensureBaseline(userCreatedAt: string | null): string {
+  const baseline = resolveBaseline(userCreatedAt);
+  if (baseline !== getBaseline()) setBaseline(baseline);
+  return baseline;
 }
 
 // --- snapshot for useSyncExternalStore ---

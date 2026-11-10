@@ -29,7 +29,7 @@
   gap: 4px;
   flex-shrink: 0;
   padding: 4px 10px;
-  border: 1px solid var(--surface-border-strong);
+  border: 1px solid var(--cal-border-strong);
   border-radius: var(--radius-sm);
   background: var(--surface-card);
   color: var(--text-secondary);

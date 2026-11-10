@@ -22,7 +22,12 @@ import { FilterBar } from "./modules/FilterBar";
 import { MiniCalendar } from "./modules/MiniCalendar";
 import { AgendaView } from "./modules/AgendaView";
 import { CATEGORY_CODES } from "@/utils/constants";
-import { parseSeoul, SEOUL_TZ, todayInSeoul } from "@/utils/date";
+import {
+  parseSeoul,
+  SEOUL_TZ,
+  todayInSeoul,
+  toSeoulDateStr,
+} from "@/utils/date";
 import classes from "./Calendar.module.css";
 
 export function CalendarClient() {
@@ -63,6 +68,14 @@ export function CalendarClient() {
 
   const todayStr = useMemo(() => todayInSeoul().format("YYYY-MM-DD"), []);
   const [controlsOpen, setControlsOpen] = useState(false);
+
+  // 필터/범위가 바뀌면 목록이 다시 그려지므로 활성 날짜는 같은 필터 상태에서만 유효하다.
+  const filterKey = `${activeScope}:${prefs.hidden_categories.join(",")}:${prefs.favorites_only ? "1" : "0"}`;
+  // 사용자가 누른 날짜(요청값). 실제로 강조할 날짜는 아래 activeDateStr에서 계산한다.
+  const [dayRequest, setDayRequest] = useState<{
+    dateStr: string;
+    filterKey: string;
+  } | null>(null);
 
   // Scope-filtered articles (before category/favorite filtering)
   const scopeFiltered = useMemo(() => {
@@ -147,6 +160,17 @@ export function CalendarClient() {
     return map;
   }, [filteredArticles, deptIdSet]);
 
+  // 미니 캘린더에서 강조할 날짜: 누른 날짜가 아니라 목록이 실제로 이동한 날짜
+  // (누른 날 이후 공지가 있는 첫 날). 공지 없는 날을 눌러도 도착한 날이 보인다.
+  const activeDateStr = useMemo(() => {
+    if (loading || !dayRequest || dayRequest.filterKey !== filterKey) {
+      return null;
+    }
+    const { dateStr } = dayRequest;
+    if (dateStr < toSeoulDateStr(window.from)) return null;
+    return [...dayMetaMap.keys()].sort().find((d) => d >= dateStr) ?? null;
+  }, [loading, dayRequest, filterKey, dayMetaMap, window.from]);
+
   // Weekly summary: next 7 days including today.
   // 합계와 내 학과 수 모두 현재 필터(카테고리/즐겨찾기)를 반영한다.
   // 눌러서 이동했을 때 목록 건수와 어긋나지 않게 하기 위해서다.
@@ -216,6 +240,7 @@ export function CalendarClient() {
 
   const handleDayClick = useCallback(
     (dateStr: string) => {
+      setDayRequest({ dateStr, filterKey });
       const date = dayjs.tz(dateStr, SEOUL_TZ);
       const inWindow =
         date.isAfter(window.from.subtract(1, "day")) &&
@@ -233,8 +258,13 @@ export function CalendarClient() {
         }
       }
     },
-    [dayMetaMap, jumpToDate, window.from, window.to],
+    [dayMetaMap, filterKey, jumpToDate, window.from, window.to],
   );
+
+  const handleBackToToday = useCallback(() => {
+    setDayRequest(null);
+    backToToday();
+  }, [backToToday]);
 
   // Partial error notice (inline, above agenda)
   const scopeNotice = useMemo(() => {
@@ -312,7 +342,7 @@ export function CalendarClient() {
                   <Button
                     variant="subtle"
                     size="compact-xs"
-                    onClick={backToToday}
+                    onClick={handleBackToToday}
                     className={classes.todayLink}
                   >
                     오늘로
@@ -419,7 +449,7 @@ export function CalendarClient() {
     <MiniCalendar
       dayMetaMap={dayMetaMap}
       onDayClick={handleDayClick}
-      activeDateStr={null}
+      activeDateStr={activeDateStr}
       showDeptMarker={activeScope === "all" && selectionActive}
     />
   );
@@ -441,7 +471,7 @@ export function CalendarClient() {
                 <Button
                   variant="subtle"
                   size="compact-xs"
-                  onClick={backToToday}
+                  onClick={handleBackToToday}
                   className={classes.todayLink}
                 >
                   오늘로
@@ -544,7 +574,7 @@ export function CalendarClient() {
               onLoadPast={loadPast}
               onLoadMore={loadMore}
               onResetFilters={reset}
-              onBackToToday={backToToday}
+              onBackToToday={handleBackToToday}
               allFilteredOut={allFilteredOut}
               todayStr={todayStr}
               deptIdSet={deptIdSet}
@@ -554,7 +584,7 @@ export function CalendarClient() {
               hasDepts={selectionActive}
               onSwitchScope={setScope}
               pastLoadToken={pastLoadToken}
-              filterKey={`${activeScope}:${prefs.hidden_categories.join(",")}:${prefs.favorites_only ? "1" : "0"}`}
+              filterKey={filterKey}
               showDeptMarkerPerRow={showDeptMarkerPerRow}
             />
           </div>

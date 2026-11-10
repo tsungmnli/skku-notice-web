@@ -1,5 +1,5 @@
 .mini {
-  border: 1px solid var(--surface-border-strong);
+  border: 1px solid var(--cal-border-strong);
   border-radius: var(--radius-lg);
   background: var(--surface-card);
   overflow: hidden;
@@ -85,6 +85,11 @@
 
 html[data-mantine-color-scheme="dark"] .dayCell[data-active] {
   background: var(--surface-hover);
+}
+
+/* 활성 날짜가 지난 날이어도 흐리게 만들지 않는다 */
+.dayCell[data-active][data-past] {
+  opacity: 1;
 }
 
 .dayNumber {

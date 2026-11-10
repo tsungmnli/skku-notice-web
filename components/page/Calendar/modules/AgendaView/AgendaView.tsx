@@ -161,7 +161,7 @@ function AgendaRow({
         }}
         aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
         aria-pressed={isFavorite}
-        size="sm"
+        size={36}
         className={classes.starBtn}
       >
         <IconStar size={16} fill={isFavorite ? "currentColor" : "none"} />
